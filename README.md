@@ -11,6 +11,8 @@ The artifacts of the reverse engineering process:
 - Full compilable source code of MineSweeper
 - Finding bugs 
 
+Most of the process is done using static analysis without using a decompiler. I wanted to read lots of assembly code.
+
 ## Wtf again
 
 I just wanted to completly reverse engineer something so.. yea.
