@@ -31,5 +31,5 @@ so yay.
 
 ## Legal issues?
 
-I don't think someone cares about it.. Anyway I don't know enough about legal issues that this might create,
+I don't think someone cares about it.. Anyway I don't know enough about legal issues that might occur,
 If someone sees any problem talk with me.
