@@ -2,7 +2,7 @@
 
 ## Wtf
 
-This project is currently on-going. The purpose of this is to create a full compilable source code
+This project is currently on-going. The purpose of this is to reconstruct the full source code
 of the original windows Minesweeper. 
 
 The artifacts of the reverse engineering process:
@@ -16,6 +16,18 @@ Most of the process is done using static analysis without using a decompiler. I 
 ## Wtf again
 
 I just wanted to completly reverse engineer something so.. yea.
+
+## Nt 4.0 Leak
+
+As stated [here](https://tcrf.net/Minesweeper_(Windows,_1990)#Source_Code_Oddities), The source code of Minesweeper has already
+been leaked - So we have a peek at the original source back then.
+
+1) I did not know it was leaked when I started this
+2) I was doing this just for fun and learning so probably I would have done it anyway
+3) This is not the exact version I wanted to reverse engineer
+
+After I finished the project, I compared the source code from my reversing to the leaked source, you can see it's almost identical,
+so yay.
 
 ## Legal issues?
 
