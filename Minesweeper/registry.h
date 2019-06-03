@@ -16,11 +16,11 @@ enum RegistryValue {
     Menu,
     Tick,
     Color,
-    BestBeginnerTime,
-    BestBeginnerName,
-    BestIntermidiateTime,
-    BestIntermidiateName,
-    BestExpertTime,
+    Time1,
+    Name1,
+    Time2,
+    Name2,
+    Time3,
     BestExpertName,
     AlreadyPlayed
 };

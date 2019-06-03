@@ -14,14 +14,15 @@ void DisplayAllBlocks();
 void DisplayAllBlocksInDC(HDC hDC);
 void SaveWinnerNameDialogBox();
 INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, DWORD lParam);
-BOOL WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+INT_PTR WINAPI WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void ShowWinnerNameAndTime(HWND hDlg, int nIDDlgItem, int secondsLeft, LPCWSTR lpName);
+void HandleRightClick(int column, int row);
 void WinnersDialogBox();
-void GetNumberOfFlags(int column, int row);
+DWORD GetFlagBlocksCount(int column, int row);
 void DisplayTimerSeconds();
 void DisplayTimerSecondsOnDC(HDC hDC);
 void PlayGameSound(DWORD soundType);
-void LongFunc(int column, int row);
+void UpdateClickedBlocksState(int column, int row);
 void UpdateBlockStateToClicked(DWORD column, DWORD row);
 void UpdateBlockStateToUnclicked(DWORD column, DWORD row);
 void DrawBlock(int column, int row);
@@ -37,5 +38,7 @@ void SetIntegerInRegistry(RegistryValue regValue, DWORD value);
 void FreePenAndBlocksAndSound();
 void FreePenAndBlocks();
 void FreeSound();
-
-
+__inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+__inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+HRSRC FindBitmapResource(USHORT resourceId);
+__inline BOOL LoadBitmapResources();

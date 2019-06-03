@@ -1,4 +1,5 @@
 #pragma once
+#include <Windows.h>
 
 HGLOBAL hBlocksBitmapResource;
 HGLOBAL hSmilesBitmapResource;
@@ -8,13 +9,16 @@ PBITMAPINFO lpBlocksBitmapInfo;
 PBITMAPINFO lpNumbersBitmapInfo;
 PBITMAPINFO lpSmilesBitmapInfo;
 
-DWORD dword_10059C0[16];
-DWORD NumberBitmaps[12];
-DWORD SmileBitmaps[5];
+DWORD BlockBitmapIndex[16];
+DWORD NumberBitmapIndex[12];
+DWORD SmileBitmapIndex[5];
 
 HBITMAP BlockBitmaps[16];
 
+// BYTE BlockArray[27][32];
 BYTE BlockArray[864];
+
+#define ACCESS_BLOCK(row, column) BlockArray[(row)*32+(column)]
 
 
 int GlobalSmileId;
@@ -22,8 +26,14 @@ int Mines_Copy;
 DWORD TimerSeconds;
 DWORD NumberOfRevealedBlocks;
 DWORD NumberOfEmptyBlocks;
-DWORD dword_1005000;
-int Mines_Copy2;
+
+// If game is finished, 16
+// After initialization, 1
+// Testing bits: 1, 8, 2
+// Minimize Bits: 0xA. When restored, bits get turned off
+// If 1 bit is not on, clicks are ignored
+DWORD dword_1005000 = 0x18;
+int CurrentPoints;
 
 HelpEntry winnersHelpData[] = {
     { ID_DIALOG_WINNERS_BTN_RESET_SCORES, 1003},
@@ -49,12 +59,12 @@ HMODULE HtmlHelpModuleHandle = NULL;
 BOOL ErrorLoadingAll;
 HTMLHELPWPROC HtmlHelpWPtr = NULL;
 
-DWORD HelpValue;
+DWORD HelpValue = 0;
 
 DWORD current_location_index;
 
-DWORD columns_array[];
-DWORD rows_array[];
+DWORD RowsList[];
+DWORD RowsList[];
 
 HelpEntry customFieldHelpData[] = {
     { ID_DIALOG_CUSTOM_FIELD_HEIGHT, 1000},
@@ -66,14 +76,14 @@ HelpEntry customFieldHelpData[] = {
     { 0, 0}
 };
 
-DWORD dword_1005168;
-DWORD dword_1005148;
-DWORD dword_100514C;
-DWORD dword_1005144;
+BOOL IsTimerOnTemp;
+BOOL IgnoreSingleClick;
+BOOL IsMenuOpen;
+BOOL Is3x3Click;
 DWORD ClickedBlockColumn;
 DWORD ClickedBlockRow;
 
-DWORD CheatValue1;
+DWORD HasMouseCapture;
 DWORD CheatPasswordIndex;
 WCHAR CheatPassword[] = L"XYZZY";
 
@@ -95,6 +105,10 @@ int Mines_InitFile;
 int Xpos_InitFile;
 int Ypos_InitFile;
 
+// 0 -> there is no sound
+// 1 -> ?
+// 2 -> could not call SND_PURGE / called FreeSound
+// 3 -> Sound is playing
 int Sound_InitFile;
 int Mark_InitFile;
 int Menu_InitFile;
@@ -106,7 +120,7 @@ int Tick_InitFile;
 
 int Time_InitFile[3];
 
-int Color_InitFile;
+BOOL Color_InitFile;
 
 WCHAR Name1_InitFile[32];
 WCHAR Name2_InitFile[32];
@@ -124,7 +138,12 @@ int Width_InitFile;
 // Number of pixels in the window
 int xRight = 0;
 int yBottom = 0;
-DWORD dword_1005164;
+
+// If this is FALSE, timer does not display time progress
+// After calling "FinishGame" the flag is FALSE
+// Calling InitializeMines() sets this to FALSE?!
+// Before calling SetTimer(), set this to TRUE
+BOOL IsTimerOnAndShowed;
 
 // .text: 1005B88
 int WindowHeightIncludingMenu = 0;

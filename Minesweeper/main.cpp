@@ -59,11 +59,11 @@ DWORD LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
 }
 
 __inline void SomeFunctionINeedToCreate() {
-	CheatValue1 = 0;
+	HasMouseCapture = 0;
 	ReleaseCapture();
 
 	if ((dword_1005000 & 1) == 0) {
-		LongFunc(-2, -2);
+		UpdateClickedBlocksState(-2, -2);
 	}
 	else {
 		DisplayResult();
@@ -77,41 +77,46 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
-        if (CheatValue1) {
+        if (HasMouseCapture) {
             SomeFunctionINeedToCreate();
         }
         break;
-    case WM_NEXTMENU:
-        dword_100514C = 1;
+    case WM_ENTERMENULOOP:
+        IsMenuOpen = TRUE;
         break;
-    case WM_SIZING:
-        dword_100514C = 0;
+    case WM_EXITMENULOOP:
+        IsMenuOpen = FALSE;
         break;
     case WM_MBUTTONDOWN:
-        if (dword_1005148 == 0 && dword_1005000 & 1 == 0) {
-            dword_1005144 = 1;
+		if (IgnoreSingleClick) {
+			IgnoreSingleClick = FALSE;
+			return FALSE;
+		}
+
+        if (dword_1005000 & 1 == 0) {
+            Is3x3Click = TRUE;
             return SomeSharedCode(hwnd, uMsg, wParam, lParam);
         }
         break;
     case WM_RBUTTONDOWN:
-        if (dword_1005148 != 0) {
-            dword_1005148 = 0;
+        if (IgnoreSingleClick) {
+            IgnoreSingleClick = FALSE;
             return FALSE;
         }
 
-        if (dword_1005000 & 1 == 0) {
+        if ((dword_1005000 & 1) == 0) {
             break;
         }
 
-        if (CheatValue1 != 0) {
-            LongFunc(-2, -2);
-            dword_1005144 = 1;
+        if (HasMouseCapture != 0) {
+            UpdateClickedBlocksState(-2, -2);
+            Is3x3Click = TRUE;
             PostMessageW(hWnd, WM_MOUSEMOVE, wParam, lParam);
         }
         else if (wParam & 1) {
             SomeSharedCode(hwnd, uMsg, wParam, lParam);
         }
-        else if (dword_100514C == 0) {
+        else if (!IsMenuOpen) {
             const int column = (LOWORD(lParam) + 4) / 16;
             const int row = (HIWORD(lParam) - 39) / 16;
             HandleRightClick(column, row);
@@ -120,8 +125,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         return FALSE;
 
     case WM_LBUTTONDOWN:
-        if (dword_1005148 == 0) {
-            dword_1005148 = 0;
+        if (IgnoreSingleClick) {
+			IgnoreSingleClick = FALSE;
             return FALSE;
         }
         if (HandleLeftClick(lParam)) {
@@ -132,7 +137,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
         }
 
-        dword_1005144 = (wParam & 6) ? 1 : 0;
+        Is3x3Click = (wParam & 6) ? TRUE : FALSE;
         return SomeSharedCode(hwnd, uMsg, wParam, lParam);
 
     case WM_MOUSEMOVE:
@@ -161,7 +166,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // Clean those bits from earlier
             dword_1005000 &= ~0xA;
             NotifyRestore();
-            dword_1005148 = 0;
+            IgnoreSingleClick = FALSE;
             break;
         }
 
@@ -173,7 +178,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
     case WM_ACTIVATE:
         if (wParam == WA_CLICKACTIVE) {
-            dword_1005148 = 1;
+            IgnoreSingleClick = TRUE;
         }
         break;
     case WM_WINDOWPOSCHANGED:
@@ -198,14 +203,38 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
+struct DifficultyConfigItem {
+	DWORD Mines;
+	DWORD Height;
+	DWORD Width;
+};
+
+#define BEGINNER_MINES 10
+#define BEGINEER_HEIGHT 9
+#define BEGINNER_WIDTH 9
+
+#define INTERMIDIATE_MINES 40
+#define INTERMIDIATE_HEIGHT 16
+#define INTERMIDIATE_WIDTH 16
+
+#define EXPERT_MINES 99
+#define EXPERT_HEIGHT 16
+#define EXPERT_WIDTH 30
+
+DifficultyConfigItem DifficultyConfigTable[] = {
+	{ BEGINNER_MINES, BEGINEER_HEIGHT, BEGINNER_WIDTH },
+	{ INTERMIDIATE_MINES, INTERMIDIATE_HEIGHT, INTERMIDIATE_WIDTH },
+	{ EXPERT_MINES, EXPERT_HEIGHT, EXPERT_WIDTH }
+};
+
 __inline BOOL MenuHandler(WORD menuItem) {
 
-    if (menuItem >= 524 && menuItem <= 529) {
-        Difficulty_InitFile = LOWORD(menuItem - 521);
-        DWORD in = Difficulty_InitFile + Difficulty_InitFile * 2) * 4;
-        Mines_InitFile = dword_1005010[in];
-        Height_InitFile = dword_1005014[in];
-        Width_InitFile = dword_1005018[in];
+	if (menuItem >= ID_MENUITEM_BEGINNER && menuItem <= ID_MENUITEM_EXPERT){
+        Difficulty_InitFile = LOWORD(menuItem - ID_MENUITEM_BEGINNER);
+
+        Mines_InitFile = DifficultyConfigTable[Difficulty_InitFile].Mines;
+        Height_InitFile = DifficultyConfigTable[Difficulty_InitFile].Height;
+        Width_InitFile = DifficultyConfigTable[Difficulty_InitFile].Width;
         InitializeMines();
         NeedToSaveConfigToRegistry = TRUE;
         InitializeMenu(Menu_InitFile);
@@ -214,7 +243,8 @@ __inline BOOL MenuHandler(WORD menuItem) {
 
     switch (menuItem) {
     case ID_MENUITEM_COLOR:
-        Color_InitFile = (Color_InitFile == 0) ? 1 : 0;
+		// Toogle Color
+		Color_InitFile = !Color_InitFile;
         FreePenAndBlocks();
         
         if (LoadBitmaps()) {
@@ -258,12 +288,13 @@ __inline BOOL MenuHandler(WORD menuItem) {
         InitializeMenu(Menu_InitFile);
         break;
     case ID_MENUITEM_SOUND:
+		
         if (Sound_InitFile) {
             FreeSound();
             Sound_InitFile = 0;
         }
         else {
-            Sound_InitFile = ResetSound();
+            Sound_InitFile = StopAllSound();
         }
         NeedToSaveConfigToRegistry = TRUE;
         InitializeMenu(Menu_InitFile);
@@ -295,7 +326,7 @@ __inline void KeyDownHandler(WPARAM wParam) {
                 Sound_InitFile = 2;
             }
             else {
-                Sound_InitFile = ResetSound();
+                Sound_InitFile = StopAllSound();
             }
         }
         break;
@@ -326,14 +357,14 @@ __inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     SetCapture(hWnd);
     ClickedBlockColumn = -1;
     ClickedBlockRow = -1;
-    CheatValue1 = 1;
+    HasMouseCapture = 1;
     DisplaySmile(SMILE_WOW);
     return MouseMoveHandler(hwnd, uMsg, wParam, lParam);
 }
 
 __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // WM_MOUSEMOVE_Handler!
-    if (CheatValue1 == 0) {
+    if (HasMouseCapture == 0) {
         if (CheatPasswordIndex == 0) {
             return DefWindowProcW(hWnd, uMsg, wParam, lParam);
         }
@@ -362,9 +393,9 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         SomeFunctionINeedToCreate();
     }
     else {
-        const int row = HIWORD(lParam) - 39) / 16;
+        const int row = (HIWORD(lParam) - 39) / 16;
         const int column = (LOWORD(lParam) + 4) / 16;
-        LongFunc(column, row);
+        UpdateClickedBlocksState(column, row);
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -372,28 +403,28 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
 
 void HandleRightClick(int column, int row) {
-    if (column > 0 && row > 0 && column <= Width_InitFile2 && row <= Height_InitFile2) {
-        PBYTE pBlock = &BlockArray[row * 32 + column];
+	if (IsInBoardRange(column, row))
+        BYTE block = ACCESS_BLOCK(row, column);
 
-        if (!(*pBlock & BLOCK_IS_REVEALED)) {
-            BYTE blockState = *pBlock & BLOCK_STATE_MASK;
+        if (!(block & BLOCK_IS_REVEALED)) {
+            BYTE blockState = block & BLOCK_STATE_MASK;
 
             switch (blockState) {
             case BLOCK_STATE_FLAG:
                 blockState = (Mark_InitFile) ? BLOCK_STATE_QUESTION_MARK : BLOCK_STATE_EMPTY_UNCLICKED;
-                ChangeMinesAndDisplayPoints(1);
+                AddAndDisplayPoints(1);
                 break;
             case BLOCK_STATE_QUESTION_MARK:
                 blockState = BLOCK_STATE_EMPTY_UNCLICKED;
                 break;
             default: // Assume BLOCK_STATE_EMPTY_UNCLICKED
                 blockState = BLOCK_STATE_FLAG;
-                ChangeMinesAndDisplayPoints(-1);
+                AddAndDisplayPoints(-1);
             }
 
             ChangeBlockState(column, row, blockState);
 
-            if (BLOCK_IS_STATE(*pBlock, BLOCK_STATE_FLAG) && 
+            if (BLOCK_IS_STATE(block, BLOCK_STATE_FLAG) &&
                 NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
                 FinishGame(TRUE);
             }
@@ -410,7 +441,7 @@ void DisplayResult() {
             PlayGameSound(SOUNDTYPE_TICK);
             TimerSeconds++;
             DisplayTimerSeconds();
-            dword_1005164 = 1;
+            IsTimerOnAndShowed = TRUE;
             
             if (SetTimer(hWnd, SOUNDTYPE_TICK, 1000, NULL) == 0){
                 DisplayErrorMessage(ID_TIMER_ERROR);
@@ -422,7 +453,7 @@ void DisplayResult() {
             ClickedBlockColumn = -2;
         }
 
-        if (dword_1005144){
+        if (Is3x3Click){
             Handle3x3Click(ClickedBlockColumn, ClickedBlockRow);
         }
         else {
@@ -445,11 +476,11 @@ void NotifyMinimize() {
     FreeSound();
 
     if ((dword_1005000 & 2) == 0) {
-        dword_1005168 = dword_1005164;
+        IsTimerOnTemp = IsTimerOnAndShowed;
     }
 
     if (dword_1005000 & 1) {
-        dword_1005164 = 0;
+        IsTimerOnAndShowed = FALSE;
     }
 
     dword_1005000 |= 2;
@@ -457,13 +488,13 @@ void NotifyMinimize() {
 
 void NotifyRestore() {
     if (dword_1005000 & 1) {
-        dword_1005164 = dword_1005168;
+        IsTimerOnAndShowed = IsTimerOnTemp;
     }
     
     dword_1005000 = 253;
 }
 
-BOOL CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_HELP:
         HELPINFO* pHelpInfo = (HELPINFO*)lParam;
@@ -502,13 +533,13 @@ void CustomFieldDialogBox() {
     Difficulty_InitFile = 3;
     // WIERD: Unconditionally change the difficulty to 3...
     InitializeCheckedMenuItems();
-    NeedToSaveConfigToReistry = TRUE;
+    NeedToSaveConfigToRegistry = TRUE;
 }
 
 void Handle3x3Click(DWORD column, DWORD row){
     BYTE blockValue = BlockArray[row*32+column];
 
-    if (blockValue & BLOCK_IS_REVEALED && GetNumberOfFlags(column, row) == blockValue){
+    if ((blockValue & BLOCK_IS_REVEALED) && GetFlagBlocksCount(column, row) == blockValue){
         BOOL lostGame = FALSE;
 
         for (int loop_row=(row-1); loop_row<=(row+1); ++loop_row){
@@ -519,7 +550,6 @@ void Handle3x3Click(DWORD column, DWORD row){
                     ExpandEmptyBlock(loop_column, loop_row);
                 }
                 else { // has a bomb?
-                    // BLOCK_STATE_BOMB_RED_BACKGROUND
                     lostGame = TRUE;
                     ChangeBlockState(loop_column, loop_row, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
                 }
@@ -534,7 +564,7 @@ void Handle3x3Click(DWORD column, DWORD row){
         }
 
     } else {
-         LongFunc(-2, -2);
+         UpdateClickedBlocksState(-2, -2);
          return;
 
     }
@@ -543,7 +573,7 @@ void Handle3x3Click(DWORD column, DWORD row){
 
 
 void TickSeconds() {
-    if (dword_1005164 && TimerSeconds < 999) {
+    if (IsTimerOnAndShowed && TimerSeconds < 999) {
         TimerSeconds++;
         DisplayTimerSeconds();
         PlayGameSound(SOUNDTYPE_TICK);
@@ -551,7 +581,7 @@ void TickSeconds() {
 }
 
 void ChangeBlockState(DWORD column, DWORD row, BYTE blockState) {
-    PBYTE pBlock = &BlockArray[row * 32 + column];
+	PBYTE pBlock = &ACCESS_BLOCK(row, column);
 
     *pBlock = (*pBlock & 0xE0) | blockState;
 
@@ -584,7 +614,7 @@ void HandleBlockClick(DWORD column, DWORD row) {
         // WIERD: LOOP IS WITHOUT AN EQUAL SIGN
         for (int current_row = 1; current_row < Height_InitFile2; ++current_row) {
             for (int current_column = 1; current_column < Width_InitFile2; ++current_column) {
-                PBYTE pLoopBlock = &BlockArray[current_row * 32 + current_column];
+				PBYTE pLoopBlock = &ACCESS_BLOCK(current_row, current_column);
 
                 // Find the first non-bomb
                 if (!(*pLoopBlock & BLOCK_IS_BOMB))  {
@@ -608,8 +638,8 @@ void ExpandEmptyBlock(DWORD column, DWORD row) {
     int i = 1;
 
     while (i != current_location_index) {
-        int row = rows_array[i];
-        int column = columns_array[i];
+        int row = RowsList[i];
+        int column = RowsList[i];
 
         ShowBlockValue(column - 1, row - 1);
         ShowBlockValue(column, row - 1);
@@ -652,8 +682,8 @@ void ShowBlockValue(DWORD column, DWORD row){
     DrawBlock(column, row);
     
     if (cnt == 0) {
-        columns_array[current_location_index] = row;
-        rows_array[current_location_index] = column;
+        RowsList[current_location_index] = row;
+        RowsList[current_location_index] = column;
         current_location_index++;
         
         if (current_location_index == 100) {
@@ -775,9 +805,7 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
     }
 }
 
-/*
-    Maybe count the bombs
-*/
+
 int CountNearBombs(int column, int row){
     int count = 0;
 
@@ -793,7 +821,7 @@ int CountNearBombs(int column, int row){
 }
 
 void FinishGame(BOOL isWon){
-    dword_1005164 = 0;
+    IsTimerOnAndShowed = FALSE;
     GlobalSmileId = (isWon) ? SMILE_WINNER : SMILE_LOST;
     DisplaySmile(GlobalSmileId);
     
@@ -801,8 +829,8 @@ void FinishGame(BOOL isWon){
     // If the player loses, bombs change into black bombs
     RevealAllBombs((isWon) ? BLOCK_STATE_FLAG : BLOCK_STATE_BLACK_BOMB);
 
-    if (isWon && Mines_Copy2 != 0){
-        ChangeMinesAndDisplayPoints(-Mines_Copy2);
+    if (isWon && CurrentPoints != 0){
+        AddAndDisplayPoints(-CurrentPoints);
     }
 
     PlayGameSound(isWon ? SOUNDTYPE_WIN : SOUNDTYPE_LOSE);
@@ -847,7 +875,7 @@ BOOL FindHtmlHelpDLL(PSTR outputLibraryName) {
     DWORD cbData = 260;
     BOOL result = FALSE;
     
-    if (RegQueryValueExA(hKey, &HelpValue, NULL, NULL, (LPBYTE)lpData, &cbData) == 0) {
+    if (RegQueryValueExA(hKey, "", NULL, NULL, (LPBYTE)outputLibraryName, &cbData) == 0) {
         result = TRUE;
     }
 
@@ -1003,7 +1031,7 @@ INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, D
 
         switch (Difficulty_InitFile){
             case DIFFICULTY_BEGINNER:
-                pWinnerNamePtr = Name1_InitFile
+				pWinnerNamePtr = Name1_InitFile;
                 break;
             case DIFFICULTY_INTERMEDIATE:
                 pWinnerNamePtr = Name2_InitFile;
@@ -1042,15 +1070,15 @@ INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, D
 }
 
 
-BOOL WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam){
+INT_PTR WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam){
     switch (uMsg){
         case WM_HELP:
             HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-            WinHelpW(pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, winnersHelpData);
+            WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
             return FALSE;
         case WM_CONTEXTMENU:
-            HELPINFO pHelpInfo = (HELPINFO)lParam;
-            WinHelpW(wParam, "winmine.hlp", HELP_CONTETMENU, winnersHelpData);
+            HELPINFO* pHelpInfo = (HELPINFO*)lParam;
+            WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
             return FALSE;
         case WM_INITDIALOG:
             break;
@@ -1102,7 +1130,7 @@ void WinnersDialogBox(){
 }
 
 
-void GetNumberOfFlags(int column, int row){
+DWORD GetFlagBlocksCount(int column, int row){
     DWORD flagsCount = 0;
 
     // Search in the sorrunding blocks
@@ -1172,12 +1200,84 @@ void PlayGameSound(DWORD soundType) {
         return;
     }
 
-
     PlaySoundW((LPCWSTR)soundResourceId, hModule, SND_ASYNC | SND_RESOURCE);
 }
 
+__inline BOOL IsInBoardRange(DWORD row, DWORD column) {
+	return column > 0 && row > 0 && column <= Width_InitFile2 && row <= Height_InitFile2;
+}
 
-void LongFunc(int column, int row) {
+__inline VOID UpdateClickedBlocksStateNormal(int column, int row, int oldClickedColumn, int oldClickedRow) {
+	if (IsInBoardRange(oldClickedRow, oldClickedColumn) &&
+		(ACCESS_BLOCK(oldClickedRow, oldClickedColumn) & BLOCK_IS_REVEALED) == 0) {
+		UpdateBlockStateToUnclicked(oldClickedColumn, oldClickedRow);
+		DrawBlock(oldClickedColumn, oldClickedRow);
+	}
+
+	if (IsInBoardRange(row, column)) {
+		const BYTE block = ACCESS_BLOCK(row, column);
+
+		if ((block & BLOCK_IS_REVEALED) == 0 && !BLOCK_IS_STATE(block, BLOCK_STATE_FLAG)) {
+			UpdateBlockStateToClicked(ClickedBlockColumn, ClickedBlockRow);
+			DrawBlock(ClickedBlockColumn, ClickedBlockRow);
+		}
+	}
+}
+
+__inline VOID UpdateClickedBlocksState3x3(int row, int column, int oldClickedColumn, int oldClickedRow) {
+	BOOL isNewLocationInBounds = IsInBoardRange(row, column);
+	BOOL isOldLocationInBounds = IsInBoardRange(oldClickedRow, oldClickedColumn);
+
+	// Get 3x3 bounds for the old and new clicks
+	DWORD oldTopRow = max(1, oldClickedRow - 1);
+	DWORD oldBottomRow = min(Height_InitFile2, oldClickedRow + 1);
+	DWORD topRow = max(1, row - 1);
+	DWORD bottomRow = min(Height_InitFile2, row + 1);
+	DWORD oldLeftColumn = max(1, oldClickedColumn - 1);
+	DWORD oldRightColumn = min(Width_InitFile2, oldClickedColumn + 1);
+	DWORD leftColumn = max(1, column - 1);
+	DWORD rightColumn = min(Width_InitFile2, column + 1);
+
+	// Change old to unclicked
+	for (int loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
+		for (int loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
+			if ((ACCESS_BLOCK(loop_row, loop_column) & BLOCK_IS_REVEALED) == 0) {
+				UpdateBlockStateToUnclicked(loop_column, loop_row);
+			}
+		}
+	}
+
+	// Change new to clicked
+	if (isNewLocationInBounds) {
+		for (int loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
+			for (int loop_column = leftColumn; loop_column < column; loop_column++) {
+				if ((ACCESS_BLOCK(loop_row, loop_column) & BLOCK_IS_REVEALED) == 0) {
+					UpdateBlockStateToClicked(loop_column, loop_row);
+				}
+			}
+		}
+	}
+
+	// Draw old blocks
+	if (isOldLocationInBounds) {
+		for (int loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
+			for (int loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
+				DrawBlock(loop_column, loop_row);
+			}
+		}
+	}
+
+	// Draw new blocks
+	if (isNewLocationInBounds) {
+		for (int loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
+			for (int loop_column = leftColumn; loop_column <= rightColumn; ++loop_column) {
+				DrawBlock(loop_column, loop_row);
+			}
+		}
+	}
+}
+
+void UpdateClickedBlocksState(int column, int row) {
     if (column == ClickedBlockColumn && row == ClickedBlockRow) {
         return;
     }
@@ -1189,99 +1289,17 @@ void LongFunc(int column, int row) {
     ClickedBlockRow = row;
 
 
-    if (dword_1005144 == 0) {
-        if (oldClickedColumn > 0 && oldClickedRow > 0 &&
-            oldClickedColumn <= Width_InitFile2 && oldClickedRow <= Height_InitFile2 // In the range of the board
-            && (BlockArray[oldClickedRow * 32 + oldClickedColumn] & BLOCK_IS_REVEALED) == 0) { //  Check some flag
-
-            UpdateBlockStateToUnclicked(oldClickedColumn, oldClickedRow);
-            DrawBlock(oldClickedColumn, oldClickedRow);
-        } 
-
-        if (column > 0 && row > 0 && column <= Width_InitFile2 && row <= Height_InitFile2) {
-            const BYTE block = BlockArray[row * 32 + column];
-
-            if ((block & BLOCK_IS_REVEALED) == 0 && !BLOCK_IS_STATE(block, BLOCK_STATE_FLAG)) {
-                UpdateBlockStateToClicked(ClickedBlockColumn, ClickedBlockRow);
-                DrawBlock(ClickedBlockColumn, ClickedBlockRow);
-            }
-        }
+    if (Is3x3Click) {
+		UpdateClickedBlocksState3x3(column, row, oldClickedColumn, oldClickedRow);
     }
     else {
-        DWORD isNewLocationInBounds;
-
-        if (column > 0 && row > 0 && column <= Width_InitFile2 && row <= Height_InitFile2) {
-            isNewLocationInBounds = 1;
-        }
-        else {
-            isNewLocationInBounds = 0;
-        }
-
-        DWORD isOldLocationInBounds;
-
-        if (oldClickedColumn > 0 && oldClickedRow > 0 &&
-            oldClickedColumn <= Width_InitFile2 && oldClickedRow <= Height_InitFile2) {
-            isOldLocationInBounds = 1;
-        }
-        else {
-            isOldLocationInBounds = 0;
-        }
-        DWORD var_c = max(1, oldClickedRow - 1);
-        DWORD var_4 = min(Height_InitFile2, oldClickedRow + 1);
-        DWORD var_1c = max(1, row - 1);
-        DWORD var_8 = min(Height_InitFile2, row + 1);
-        DWORD var_10 = max(1, oldClickedColumn - 1);
-        row = min(Width_InitFile2, oldClickedColumn + 1);
-        DWORD var_20 = max(1, column - 1);
-        column = min(Width_InitFile2, column + 1);
-
-        if (var_c <= var_4) {
-
-            PBYTE ptr = &BlockArray[var_c * 32];
-
-            // Change to unclicked
-            for (int loop_row = var_c; i <= var_4; loop_row++, ptr += 32) {
-                for (int loop_column = var_10; loop_column <= row; ++loop_column) {
-                    if ((ptr[loop_column] & BLOCK_IS_REVEALED) == 0) {
-                        UpdateBlockStateToUnclicked(loop_column, loop_row);
-                    }
-                }
-            }
-        }
-
-        if (isNewLocationInBounds && var_1c <= var_8) {
-            PBYTE ptr = &BlockArray[var_1c * 32];
-            // Change to clicked
-            for (int loop_row = var_1c; loop_row <= var_8; ++i, ptr += 32) {
-                if (int loop_column = var_20; loop_column < column; loop_column++) {
-                    if ((ptr[loop_column] & BLOCK_IS_REVEALED) == 0) {
-                        UpdateBlockStateToClicked(loop_column, loop_row);
-                    }
-                }
-            }
-        }
-
-        if (isOldLocationInBounds) {
-            for (int loop_row = var_c; loop_row <= var_4; loop_row++) {
-                for (int loop_column = var_10; loop_column <= row; ++loop_column) {
-                    DrawBlock(loop_column, loop_row);
-                }
-            }
-        }
-
-        if (isNewLocationInBounds) {
-            for (int loop_row = var_1c; loop_row < var_8; ++loop_row) {
-                for (int loop_column = var_20; loop_column < column; ++loop_column) {
-                    DrawBlock(loop_column, loop_row);
-                }
-            }
-        }        
+		UpdateClickedBlocksStateNormal(column, row, oldClickedColumn, oldClickedRow);
     }
 
 }
 
 void UpdateBlockStateToClicked(DWORD column, DWORD row) {
-    PBYTE pBlock = &BlockArray[row * 32 + column];
+	PBYTE pBlock = &ACCESS_BLOCK(row, column);
     BYTE BlockFlags = *pBlock & BLOCK_STATE_MASK;
 
     if (*pBlock == BLOCK_STATE_QUESTION_MARK) {
@@ -1305,16 +1323,17 @@ void UpdateBlockStateToUnclicked(DWORD column, DWORD row) {
         res = BLOCK_STATE_QUESTION_MARK;
     }
 
-    *pBlock = (Block & 0xe) | res;
+    *pBlock = (Block & BLOCK_STATE_FLAG) | res;
 }
 
 void DrawBlock(int column, int row) {
     HDC hDC = GetDC(hWnd);
-    BYTE BlockValue = BlockArray[row * 32 + column] & BLOCK_STATE_MASK;
+    BYTE BlockValue = ACCESS_BLOCK(row, column) & BLOCK_STATE_MASK;
     BitBlt(hDC, column * 16 - 4, row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, BlockStates[BlockValue], 0, 0, SRCCOPY);
     ReleaseDC(hWnd, hDC);
 }
 
+// TODO: Add return value
 BOOL HandleLeftClick(DWORD dwLocation) {
     MSG msg;
     RECT rect;
@@ -1396,7 +1415,7 @@ void DisplaySmileOnDC(HDC hDC, DWORD smileId) {
         0, // ySrc 
         0, // ScanStart
         24, // cLines
-        SmileBitmaps[smileId] + lpSmilesBitmapInfo, // lpvBits
+        SmileBitmapIndex[smileId] + lpSmilesBitmapInfo, // lpvBits
         lpSmilesBitmapInfo, // lpbmi
         FALSE // ColorUse
     );
@@ -1447,7 +1466,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ICC_COOL_CLASSES | ICC_PAGESCROLLER_CLASS;
 
     InitCommonControlsEx(&picce);
-    hIcon = LoadIconW(hModule, (LPCWSTR)0x64);
+    hIcon = LoadIconW(hModule, (LPCWSTR)ID_ICON_GROUP);
 
     WNDCLASSW cls;
     
@@ -1457,7 +1476,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     cls.cbWndExtra = 0;
     cls.hInstance = hInstance;
     cls.hIcon = hIcon;
-    cls.hCursor = LoadCursorW(NULL, (LPWSTR)0x7f00);
+    cls.hCursor = LoadCursorW(NULL, (LPWSTR)IDC_ARROW);
     cls.hbrBackground = (HBRUSH)GetStockObject(LTGRAY_BRUSH);
     cls.lpszMenuName = NULL;
     cls.lpszClassName = ClassName;
@@ -1466,8 +1485,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
 
-    hMenu = LoadMenuW(hModule, (LPCWSTR)0x1f4);
-    HACCEL hAccTable = LoadAcceleratorsW(hModule, (LPCWSTR)0x1f5);
+    hMenu = LoadMenuW(hModule, (LPCWSTR)ID_MENU);
+    HACCEL hAccTable = LoadAcceleratorsW(hModule, (LPCWSTR)ID_ACCELERATORS);
     
     InitializeConfigFromRegistry();
     
@@ -1491,7 +1510,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
 
-    // 1 does not anything...
+    // 1 does not do anything...
     InitializeWindowBorder(1);
     
     if (!InitializeBitmapsAndBlockArray()) {
@@ -1525,7 +1544,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 void SaveConfigToRegistry() {
     DWORD dwDisposition;
-    RegCreateKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, 0, 0, KEY_WRITE, 0, &hKey, &dwDisposition);
+    RegCreateKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, 0, 0, KEY_WRITE, 0, &hRegistryKey, &dwDisposition);
 
     SetIntegerInRegistry(Difficulty, Difficulty_InitFile);
     SetIntegerInRegistry(Height, Height_InitFile);
@@ -1537,15 +1556,15 @@ void SaveConfigToRegistry() {
     SetIntegerInRegistry(Sound, Sound_InitFile);
     SetIntegerInRegistry(Xpos, Xpos_InitFile);
     SetIntegerInRegistry(Ypos, Ypos_InitFile);
-    SetIntegerInRegistry(BestBeginnerTime, Time_InitFile[0]);
-    SetIntegerInRegistry(BestIntermidiateTime, Time_InitFile[1]);
-    SetIntegerInRegistry(BestExpertTime, Time_InitFile[2]);
+    SetIntegerInRegistry(Time1, Time_InitFile[0]);
+    SetIntegerInRegistry(Time2, Time_InitFile[1]);
+    SetIntegerInRegistry(Time3, Time_InitFile[2]);
     
-    SetStringInRegistry(BestBeginnerName, Name1_InitFile);
-    SetStringInRegistry(BestIntermidiateName, Name2_InitFile);
+    SetStringInRegistry(Name1, Name1_InitFile);
+    SetStringInRegistry(Name2, Name2_InitFile);
     SetStringInRegistry(BestExpertName, Name3_InitFile);
 
-    RegCloseKey(hKey);
+    RegCloseKey(hRegistryKey);
 }
 
 void SetStringInRegistry(RegistryValue regValue, LPCWSTR lpStringValue) {
@@ -1597,38 +1616,36 @@ void InitializeMines() {
     Width_InitFile2 = Width_InitFile;
     Height_InitFile2 = Height_InitFile;
 
-    InitializeBlockArray();
+    InitializeBlockArrayBorders();
     
     GlobalSmileId = 0;
     
     // Setup all the mines
     for (Mines_Copy = 0; Mines_Copy < Mines_InitFile; ++Mines_Copy) {
-        int randomX;
-        int randomY;
+        int randomColumn;
+        int randomRow;
         
         // Find a location for the mine
         do {
-            randomX = GetRandom(Width_InitFile2) + 1;
-            randomY = GetRandom(Height_InitFile2) + 1;
-        } while (BlockArray[randomX + randomY * 64] & 0x80);
-
-        PBYTE minePlace = &BlockArray[randomX + randomY * 64];
-
-        // SET A MINE
-        *minePlace |= 0x80;
+            randomColumn = GetRandom(Width_InitFile2) + 1;
+            randomRow = GetRandom(Height_InitFile2) + 1;
+        } while (ACCESS_BLOCK(randomRow, randomColumn) & BLOCK_IS_BOMB);
+		
+		// SET A MINE
+		ACCESS_BLOCK(randomRow, randomColumn) |= BLOCK_IS_BOMB;
     }
     
     TimerSeconds = 0;
-    Mines_Copy2 = Mines_Copy;
+    CurrentPoints = Mines_Copy;
     NumberOfRevealedBlocks = 0;
     NumberOfEmptyBlocks = (Height_InitFile2 * Width_InitFile2) - Mines_InitFile;
     dword_1005000 = 1;
-    ChangeMinesAndDisplayPoints(0); // Should have called DisplayPoints()!
+    AddAndDisplayPoints(0); // Should have called DisplayPoints()!
     InitializeWindowBorder(flags);
 }
 
-void ChangeMinesAndDisplayPoints(DWORD minesChange) {
-    Mines_Copy2 += minesChange;
+void AddAndDisplayPoints(DWORD pointsToAdd) {
+    CurrentPoints += pointsToAdd;
     DisplayPoints();
 }
 
@@ -1649,13 +1666,13 @@ void DisplayPointsOnDC(HDC hDC) {
     int lowDigit;
     int highNum;
 
-    if (Mines_Copy2 >= 0) {
-        lowDigit = Mines_Copy2 / 100;
-        highNum = Mines_Copy2 % 100;
+    if (CurrentPoints >= 0) {
+        lowDigit = CurrentPoints / 100;
+        highNum = CurrentPoints % 100;
     }
     else {
         lowDigit = NUM_MINUS;
-        highNum = Mines_Copy2 % 100;
+        highNum = CurrentPoints % 100;
     }
    
     DisplayNumber(hDC, POINT_BIG_NUM_X, lowDigit);
@@ -1689,7 +1706,7 @@ void InitializeA() {
     ScreenHeightInPixels = GetSystemMetrics(SM_CYCAPTION) + 1;
     MenuBarHeightInPixels = GetSystemMetrics(SM_CYMENU) + 1;
     WindowHeightInPixels = GetSystemMetrics(SM_CYBORDER) + 1;
-    WindowHeightInPixels = GetSystemMetrics(SM_CXBORDER) + 1;
+    WindowWidthInPixels = GetSystemMetrics(SM_CXBORDER) + 1;
 
     DWORD dwDisposition;
     
@@ -1709,7 +1726,7 @@ void InitializeA() {
         return;
     }
 
-    // WEIRD: Why min is greater then the max..?
+	// Load Items From .ini File
     Height_InitFile = GetIntegerFromInitFile(Height, 9, 9, 25);
     Width_InitFile = GetIntegerFromInitFile(Width, 9, 9, 30);
     Difficulty_InitFile = GetIntegerFromInitFile(Difficulty, 0, 0, 3);
@@ -1720,22 +1737,37 @@ void InitializeA() {
     Mark_InitFile = GetIntegerFromInitFile(Mark, 1, 0, 1);
     Tick_InitFile = GetIntegerFromInitFile(Tick, 0, 0, 1);
     Menu_InitFile = GetIntegerFromInitFile(Menu, 0, 0, 2);
-    Time1_InitFile = GetIntegerFromInitFile(BestBeginnerTime, 999, 0, 999);
-    Time2_InitFile = GetIntegerFromInitFile(BestIntermidiateTime, 999, 0, 999);
-    Time3_InitFile = GetIntegerFromInitFile(BestExpertTime, 999, 0, 999);
+    Time_InitFile[TIME_BEGINNER] = GetIntegerFromInitFile(Time1, 999, 0, 999);
+    Time_InitFile[TIME_INTERMIDIATE] = GetIntegerFromInitFile(Time2, 999, 0, 999);
+    Time_InitFile[TIME_EXPERT] = GetIntegerFromInitFile(Time3, 999, 0, 999);
         
-    GetStringFromInitFile(BestBeginnerName, Name1_InitFile);
-    GetStringFromInitFile(BestIntermidiateName, Name2_InitFile);
+    GetStringFromInitFile(Name1, Name1_InitFile);
+    GetStringFromInitFile(Name2, Name2_InitFile);
     GetStringFromInitFile(BestExpertName, Name3_InitFile);
         
     HDC hDC = GetDC(GetDesktopWindow());
     int desktopColors = GetDeviceCaps(hDC, NUMCOLORS);
-    Color_InitFile = GetIntegerFromInitFile(Color, (desktopColors == 2) ? 0 : 1, 0, 1);
+    Color_InitFile = GetIntegerFromInitFile(Color, (desktopColors == 2) ? FALSE : TRUE, 0, 1);
     ReleaseDC(GetDesktopWindow(), hDC);
 
     if (Sound_InitFile == 3) {
-        Sound_InitFile = ResetSound();
+        Sound_InitFile = StopAllSound();
     }
+}
+
+VOID GetStringFromRegistry(RegistryValue id, LPWSTR lpData) {
+	BYTE cbData = 64;
+
+	if (RegQueryValueExW(
+		hRegistryKey,
+		RegistryValuesNames[(int)id],
+		NULL,
+		NULL,
+		&cbData,
+		(LPDWORD)lpData
+	)) {
+		lstrcpyW(lpData, AnonymousStr);
+	}
 }
 
 void InitializeConfigFromRegistry() {
@@ -1755,12 +1787,12 @@ void InitializeConfigFromRegistry() {
     Mark_InitFile = GetIntegerFromRegistry(Mark, 1, 0, 1);
     Tick_InitFile = GetIntegerFromRegistry(Tick, 0, 0, 1);
     Menu_InitFile = GetIntegerFromRegistry(Menu, 0, 0, 2);
-    Time_InitFile[TIME_BEGINNER] = GetIntegerFromRegistry(BestBeginnerTime, 999, 0, 999);
-	Time_InitFile[TIME_INTERMIDIATE] = GetIntegerFromRegistry(BestIntermidiateTime, 999, 0, 999);
-	Time_InitFile[TIME_EXPERT] = GetIntegerFromRegistry(BestExpertTime, 999, 0, 999);
+    Time_InitFile[TIME_BEGINNER] = GetIntegerFromRegistry(Time1, 999, 0, 999);
+	Time_InitFile[TIME_INTERMIDIATE] = GetIntegerFromRegistry(Time2, 999, 0, 999);
+	Time_InitFile[TIME_EXPERT] = GetIntegerFromRegistry(Time3, 999, 0, 999);
 
-    GetStringFromRegistry(BestBeginnerName, Name1_InitFile);
-    GetStringFromRegistry(BestIntermidiateName, Name2_InitFile);
+    GetStringFromRegistry(Name1, Name1_InitFile);
+    GetStringFromRegistry(Name2, Name2_InitFile);
     GetStringFromRegistry(BestExpertName, Name3_InitFile);
     
     HDC hDC = GetDC(GetDesktopWindow());
@@ -1771,58 +1803,36 @@ void InitializeConfigFromRegistry() {
     ReleaseDC(GetDesktopWindow(), hDC);
 
     if (Sound_InitFile == 3) {
-        Sound_InitFile = ResetSound();
+        Sound_InitFile = StopAllSound();
     }
 
     RegCloseKey(hRegistryKey);
 
 }
 
-// .text: 1003A12
-// Why there are so many calls to GetPrivateProfileIntW??
-// There should have been only one call in the beginning of the function.
-// I guess it is because of the usage of a MIN and MAX macro, with the function call
-// as a macro argument.
-int GetIntegerFromInitFile(RegistryValue regValue, int nDefault, int maxValue, int minValue) {
-    LPCWSTR lpKeyName = RegistryValuesNames[(DWORD)regValue];
-    int result;
 
-    if (GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName) >= minValue) {
-        result = GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName);
-    }
-    else {
-        result = minValue;
-    }
+// In the assembly code there are many calls to GetPrivateProfileIntW(). 
+// It is because it is called inside a macro argument.
+// Moreover, the "min" logic is calculated twice, again because it's called inside a macro argument.
+int GetIntegerFromInitFile(RegistryValue regValue, int nDefault, int minValue, int maxValue) {
 
-    if (GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName) <= maxValue) {
-        result = GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName);
-
-        if (result >= minValue) {
-            GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName);
-        }
-        else {
-            result = minValue;
-        }
-    }
-    else {
-        result = maxValue;
-    }
-
-    return result;
+	LPCWSTR lpKeyName = RegistryValuesNames[(DWORD)regValue];
+	
+	return max(min(maxValue, GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName)), minValue);
 }
 
 int GetStringFromInitFile(RegistryValue regValue, LPWSTR lpReturnedString) {
-    return GetPrivateProfileStringW(ClassName, RegistryValuesNames[(DWORD)regValue],
-        AnonymousStr, lpReturnedString, 32, lpInitFileName)
+	return GetPrivateProfileStringW(ClassName, RegistryValuesNames[(DWORD)regValue],
+		AnonymousStr, lpReturnedString, 32, lpInitFileName);
 }
 
-DWORD ResetSound() {
+// 3 if SND_PURGE succeeded else 2
+DWORD StopAllSound() {
     if (PlaySoundW(NULL, NULL, SND_PURGE)) {
         3;
     }
 
     return 2;
-
 }
 
 void InitializeWindowBorder(DWORD flags) {
@@ -1907,86 +1917,134 @@ void InitializeWindowBorder(DWORD flags) {
 
 BOOL InitializeBitmapsAndBlockArray() {
     if (LoadBitmaps()) {
-        InitializeBlockArray();
+        InitializeBlockArrayBorders();
         return TRUE;
     }
 
     return FALSE;
 }
 
-void InitializeBlockArray() {
-    memset(BlockArray, 15, sizeof(BlockArray));
+void InitializeBlockArrayBorders() {
+	
+    memset(BlockArray, BLOCK_STATE_INITIAL_VALUE, sizeof(BlockArray));
 
-    for (int i = 0; i != (Width_InitFile2 + 2); ++i) {
-        GameState.BlockArray[i] = 16;
-        GameState.CurrentBlockStates[Height_InitFile2 * 64 + i] = 16;
+    for (int column = Width_InitFile2 + 1; column >= 0; column--) {
+		// Fill upper border
+		ACCESS_BLOCK(0, column) = BLOCK_STATE_EMPTY_UNCLICKED;
+
+		// Fill lower border
+		ACCESS_BLOCK(Height_InitFile2 + 1, column) = BLOCK_STATE_EMPTY_UNCLICKED;
     }
-    
-    PBYTE pFirst = GameState.BlockArray + (Height_InitFile2 + 2) * 64;
-    PBYTE pSecond = pFirst + 1 + Width_InitFile2;
 
-    for (int i = 0; i != (Height_InitFile + 2); ++i) {
-        *pFirst = 16;
-        *pSecond = 16;
+	for (int row = Height_InitFile2 + 1; row >= 0; row++) {
+		// Fill left border
+		ACCESS_BLOCK(row, 0) = BLOCK_STATE_EMPTY_UNCLICKED;
 
-        pFirst -= 32;
-        pSecond -= 32;
-    }
+		// Fill right border
+		ACCESS_BLOCK(row, Width_InitFile2 + 1) = BLOCK_STATE_EMPTY_UNCLICKED;
+	}
 }
 
 BOOL LoadBitmaps() {
-    hSmilesBitmapResource = TryLoadBitmapResource(ID_BITMAP_BLOCK);
-    hNumbersBitmapResource = TryLoadBitmapResource(ID_BITMAP_NUMBERS);
-    hBlocksBitmapResource = TryLoadBitmapResource(ID_BITMAP_SMILES);
+	if (!LoadBitmapResources()) {
+		return FALSE;
+	}
+	
+	InitializePen();
 
-    if (hSmilesBitmapResource == NULL || hBlocksBitmapResource == NULL || hNumbersBitmapResource == NULL) {
-        return FALSE;
-    }
+	InitializeBitmapsIndexes();
 
-    lpBlocksBitmapInfo = (PBITMAPINFO)LockResource(hBlocksBitmapResource);
-    lpNumbersBitmapInfo = (PBITMAPINFO)LockResource(hNumbersBitmapResource);
-    lpSmilesBitmapInfo = (PBITMAPINFO)LockResource(hSmilesBitmapResource);
+	ProcessBlockBitmaps();
 
-    if (Color_InitFile) {
-        hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
-    }
-    else {
-        hPen = (HPEN)GetStockObject(BLACK_PEN);
-    }
-
-    const DWORD initialValue = (Color_InitFile) ? 104 : 48;
-    
-    InitializeBitmapBits(dword_10059C0, _countof(dword_10059C0), initialValue, SomeCalculation1(16, 16));
-    InitializeBitmapBits(NumberBitmaps, _countof(NumberBitmaps), initialValue, SomeCalculation1(13, 23));
-    InitializeBitmapBits(SmileBitmaps, _countof(SmileBitmaps), initialValue, SomeCalculation1(24, 24));
-
-    HDC hWndDC = GetDC(hWnd);
-
-    for (int i = 0; i < 16; ++i) {
-        BlockStates[i] = CreateCompatibleDC(hWndDC);
-
-        if (BlockStates[i] == NULL) {
-            OutputDebugStringA("FLoad failed to create compatible dc\n");
-        }
-
-        BlockBitmaps[i] = CreateCompatibleBitmap(hWndDC, 16, 16);
-
-        if (BlockBitmaps[i] == NULL) {
-            OutputDebugStringA("Failed to create Bitmap\n");
-        }
-
-        SelectObject(BlockStates[i], BlockBitmaps[i]);
-        SetDIBitsToDevice(BlockStates[i], 0, 0, 16, 16, 0, 0, 0, 16, dword_10059C0[i] + lpBlocksBitmapInfo, lpBlocksBitmapInfo, 0);
-    }
-
-    ReleaseDC(hWnd, hWndDC);
     return TRUE;
 }
 
-__inline void InitializeBitmapBits(PDWORD pArray, int count, DWORD initialValue, DWORD increaseValue) {
-    for (int i = 0; i < count ; ++i) {
-        pArray[i] = initialValue;
-        initialValue += increaseValue;
+__inline void InitializePen() {
+	if (Color_InitFile) {
+		hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+	}
+	else {
+		hPen = (HPEN)GetStockObject(BLACK_PEN);
+	}
+}
+
+__inline void ProcessBlockBitmaps() {
+	HDC hWndDC = GetDC(hWnd);
+
+	for (int i = 0; i < _countof(BlockStates); ++i) {
+		BlockStates[i] = CreateCompatibleDC(hWndDC);
+
+		if (BlockStates[i] == NULL) {
+			// Maybe that means the original name of the function was "FLoad"
+			// This is a bad name dude. 
+			OutputDebugStringA("FLoad failed to create compatible dc\n");
+		}
+
+		BlockBitmaps[i] = CreateCompatibleBitmap(hWndDC, 16, 16);
+
+		if (BlockBitmaps[i] == NULL) {
+			OutputDebugStringA("Failed to create Bitmap\n");
+		}
+
+		// Mmm. BlockState[i] might be an invalid value, Also BlockBitmaps[i] 
+		// Why would he perform this operation anyway.. :(
+		SelectObject(BlockStates[i], BlockBitmaps[i]);
+		SetDIBitsToDevice(BlockStates[i], 0, 0, BLOCK_WIDTH, BLOCK_HEIGHT, 
+			0, 0, 0, 16, BlockBitmapIndex[i] + lpBlocksBitmapInfo, lpBlocksBitmapInfo, 0);
+	}
+
+	ReleaseDC(hWnd, hWndDC);
+}
+
+__inline BOOL LoadBitmapResources() {
+	hBlocksBitmapResource = TryLoadBitmapResource(ID_BITMAP_BLOCK);
+	hNumbersBitmapResource = TryLoadBitmapResource(ID_BITMAP_NUMBERS);
+	hSmilesBitmapResource = TryLoadBitmapResource(ID_BITMAP_SMILES);
+
+	// Yea I know, it's wierd that the check is performed after all the resources are loaded..
+	if (hSmilesBitmapResource == NULL || hBlocksBitmapResource == NULL || hNumbersBitmapResource == NULL) {
+		return FALSE;
+	}
+
+	lpBlocksBitmapInfo = (PBITMAPINFO)LockResource(hBlocksBitmapResource);
+	lpNumbersBitmapInfo = (PBITMAPINFO)LockResource(hNumbersBitmapResource);
+	lpSmilesBitmapInfo = (PBITMAPINFO)LockResource(hSmilesBitmapResource);
+
+	return TRUE;
+}
+
+__inline void InitializeBitmapsIndexes() {
+#define COLORED_BMP_START 104
+#define NONCOLORED_BMP_START 48
+
+	const DWORD bitmapStartIndex = (Color_InitFile) ? COLORED_BMP_START : NONCOLORED_BMP_START;
+
+	InitializeBitmapIndexes(
+		BlockBitmapIndex,           // indexesArray
+		_countof(BlockBitmapIndex), // numberOfBitmaps
+		bitmapStartIndex,           // firstBitmapIndex
+		GetBitmapByteLength(BLOCK_WIDTH, BLOCK_HEIGHT) // bytesPerBitmap
+	);
+
+	InitializeBitmapIndexes(
+		NumberBitmapIndex,         // indexesArray
+		_countof(NumberBitmapIndex), // numberOfBitmaps
+		bitmapStartIndex, // firstBitmapIndex
+		GetBitmapByteLength(NUMBER_WIDTH, NUMBER_HEIGHT) // bytesPerBitmap
+	);
+
+	InitializeBitmapIndexes(
+		SmileBitmapIndex, // indexesArray
+		_countof(SmileBitmapIndex), // numberOfBitmaps
+		bitmapStartIndex, // firstBitmapIndex
+		GetBitmapByteLength(SMILE_BITMAP_WIDTH, SMILE_BITMAP_HEIGHT) // bytesPerBitmap
+	);
+}
+
+__inline void InitializeBitmapIndexes(PDWORD indexesArray, int numberOfBitmaps, DWORD firstBitmapIndex, DWORD bytesPerBitmap) {
+    for (int i = 0; i < numberOfBitmaps ; ++i) {
+        indexesArray[i] = firstBitmapIndex;
+        firstBitmapIndex += bytesPerBitmap;
     }
 }
 
@@ -2003,25 +2061,24 @@ __inline HGLOBAL TryLoadBitmapResource(DWORD resourceId) {
 void DisplayNumber(HDC hDC, int xPosition, int numberToDisplay) {
     SetDIBitsToDevice(hDC,
         xPosition, NUMBER_Y, NUMBER_WIDTH, NUMBER_HEIGHT, 0, 0, 0, 23,
-        NumberBitmaps[numberToDisplay] + lpNumbersBitmapInfo, lpNumbersBitmapInfo, 0);
+        NumberBitmapIndex[numberToDisplay] + lpNumbersBitmapInfo, lpNumbersBitmapInfo, 0);
     
 }
 
-int SomeCalculation1(int a, int b) {
-    int val = (Color_InitFile) ? 4 : 1;
-    val = (val * a + 31) / 8;
+int GetBitmapByteLength(int a, int b) {
+    int colorDepth = (Color_InitFile) ? 4 : 1;
+    colorDepth = (colorDepth * a + 31) / 8;
     // Clear those bits: 0b11
-    val &= 0xFFFFFFFC;
-    return val * b;
+    colorDepth &= ~0b11;
+    return colorDepth * b;
 }
 
-HRSRC FindBitmapResource(DWORD val) {
+HRSRC FindBitmapResource(USHORT resourceId) {
     // If there is no color, 
-    // Get the next resource which is colorless
-    if (Color_InitFile == 0) {
-        val++;
-        val &= 0xffff;
+    // Get the next resource which is color-less
+    if (!Color_InitFile) {
+		resourceId++;
     }
 
-    return FindResourceW(hModule, (LPCWSTR)(val), 2);
+    return FindResourceW(hModule, (LPCWSTR)(resourceId), (LPWSTR)RT_BITMAP);
 }
