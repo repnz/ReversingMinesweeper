@@ -61,7 +61,7 @@ VOID LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
 
 // Called on button release
 // Called on MouseMove 
-__inline void SomeFunctionINeedToCreate() {
+__inline void ReleaseMouseCapture() {
 	HasMouseCapture = FALSE;
 	ReleaseCapture();
 
@@ -81,7 +81,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
         if (HasMouseCapture) {
-            SomeFunctionINeedToCreate();
+            ReleaseMouseCapture();
         }
         break;
     case WM_ENTERMENULOOP:
@@ -98,7 +98,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         if ((StateFlags & STATE_GAME_IS_ON) == 0) {
             Is3x3Click = TRUE;
-            return SomeSharedCode(hwnd, uMsg, wParam, lParam);
+            return CaptureMouseInput(hwnd, uMsg, wParam, lParam);
         }
         break;
     case WM_RBUTTONDOWN:
@@ -117,7 +117,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             PostMessageW(hWnd, WM_MOUSEMOVE, wParam, lParam);
         }
         else if (wParam & 1) {
-            SomeSharedCode(hwnd, uMsg, wParam, lParam);
+            CaptureMouseInput(hwnd, uMsg, wParam, lParam);
         }
         else if (!IsMenuOpen) {
 
@@ -143,7 +143,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
 
         Is3x3Click = (wParam & 6) ? TRUE : FALSE;
-        return SomeSharedCode(hwnd, uMsg, wParam, lParam);
+        return CaptureMouseInput(hwnd, uMsg, wParam, lParam);
 
     case WM_MOUSEMOVE:
         return MouseMoveHandler(hwnd, uMsg, wParam, lParam);
@@ -359,7 +359,7 @@ __inline void KeyDownHandler(WPARAM wParam) {
     }
 }
 
-__inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+__inline LRESULT CaptureMouseInput(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // Shared code...
     SetCapture(hWnd);
 	ClickedBlock = (BoardPoint) { -1, -1 };
@@ -394,7 +394,7 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         }
     }
     else if ((StateFlags & STATE_GAME_IS_ON) == 0) {
-        SomeFunctionINeedToCreate();
+        ReleaseMouseCapture();
     }
     else {
 		// Update Mouse Block
