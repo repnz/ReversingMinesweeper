@@ -30,7 +30,7 @@
 
 #define BLOCK_STATE_MASK 0x1f
 
-#define BLOCK_STATE_INITIAL_VALUE 0x10
+#define BLOCK_STATE_BORDER_VALUE 0x10
 #define BLOCK_STATE_EMPTY_UNCLICKED 0xF
 #define BLOCK_STATE_FLAG 0xE
 #define BLOCK_STATE_QUESTION_MARK 0xD
@@ -66,6 +66,7 @@ typedef struct _HelpEntry {
 
 #define HtmlHelpW_ExportOrdinal 0x0E
 
+#define TIMER_ID 1
 #define SOUND_ON 3
 #define SOUNDTYPE_TICK 1
 #define SOUNDTYPE_WIN 2

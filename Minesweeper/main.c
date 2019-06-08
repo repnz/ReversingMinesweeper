@@ -41,15 +41,15 @@ void DisplayErrorMessage(UINT uID) {
     WCHAR Caption[128];
     
     if (uID >= 999) {
-        LoadStringW(hModule, ID_ERR_MSG_D, Caption, 128);
+        LoadStringW(hModule, ID_ERR_MSG_D, Caption, sizeof(Caption));
         wsprintfW(Buffer, Caption, uID);
     }
     else {
-        LoadStringW(hModule, uID, Buffer, 128);
+        LoadStringW(hModule, uID, Buffer, sizeof(Buffer));
     }
 
     // Show Title: Minesweeper Error, Content: Buffer from above
-    LoadStringW(hModule, ID_ERROR, Caption, 128);
+    LoadStringW(hModule, ID_ERROR, Caption, sizeof(Caption));
     MessageBoxW(NULL, Buffer, Caption, MB_ICONERROR);
 }
 
@@ -59,12 +59,14 @@ VOID LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
     }
 }
 
+// Called on button release
+// Called on MouseMove 
 __inline void SomeFunctionINeedToCreate() {
-	HasMouseCapture = 0;
+	HasMouseCapture = FALSE;
 	ReleaseCapture();
 
-	if ((dword_1005000 & 1) == 0) {
-		UpdateClickedBlocksState((BoardPoint) { -2, -2 });
+	if (StateFlags & STATE_GAME_IS_ON) {
+		ReleaseBlocksClick();		
 	}
 	else {
 		DisplayResult();
@@ -94,7 +96,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			return FALSE;
 		}
 
-        if ((dword_1005000 & 1) == 0) {
+        if ((StateFlags & STATE_GAME_IS_ON) == 0) {
             Is3x3Click = TRUE;
             return SomeSharedCode(hwnd, uMsg, wParam, lParam);
         }
@@ -105,12 +107,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return FALSE;
         }
 
-        if ((dword_1005000 & 1) == 0) {
+        if ((StateFlags & STATE_GAME_IS_ON) == 0) {
             break;
         }
 
-        if (HasMouseCapture != 0) {
-			UpdateClickedBlocksState((BoardPoint) { -2, -2 });
+        if (HasMouseCapture) {
+			ReleaseBlocksClick();
             Is3x3Click = TRUE;
             PostMessageW(hWnd, WM_MOUSEMOVE, wParam, lParam);
         }
@@ -136,7 +138,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
         }
 
-        if ((dword_1005000 & 1) == 0) {
+        if ((StateFlags & STATE_GAME_IS_ON) == 0) {
             break;
         }
 
@@ -163,12 +165,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case SC_MINIMIZE:
             NotifyMinimize();
             // Maybe add minimize flags..
-            dword_1005000 |= 0xA; // 0b1010
+            StateFlags |= (STATE_WINDOW_MINIMIZED | STATE_WINDOW_MINIMIZED_2);
             break;
         case SC_RESTORE:
             // Clean those bits from earlier
-            dword_1005000 &= ~0xA;
-            NotifyRestore();
+			StateFlags &= ~(STATE_WINDOW_MINIMIZED | STATE_WINDOW_MINIMIZED_2);
+            NotifyWindowRestore();
             IgnoreSingleClick = FALSE;
             break;
         }
@@ -176,7 +178,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
 
     case WM_DESTROY:
-        KillTimer(hWnd, 1);
+        KillTimer(hWnd, TIMER_ID);
         PostQuitMessage(0);
         break;
     case WM_ACTIVATE:
@@ -185,7 +187,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         break;
     case WM_WINDOWPOSCHANGED:
-        if ((dword_1005000 & 8) == 0) {
+        if ((StateFlags & STATE_WINDOW_MINIMIZED_2) == 0) {
             WINDOWPOS* pos = (WINDOWPOS*)lParam;
             Xpos_InitFile = pos->x;
             Ypos_InitFile = pos->y;
@@ -240,7 +242,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
         Mines_InitFile = DifficultyConfigTable[Difficulty_InitFile].Mines;
         Height_InitFile = DifficultyConfigTable[Difficulty_InitFile].Height;
         Width_InitFile = DifficultyConfigTable[Difficulty_InitFile].Width;
-        InitializeMines();
+        InitializeNewGame();
         NeedToSaveConfigToRegistry = TRUE;
         InitializeMenu(Menu_InitFile);
         return TRUE;
@@ -269,7 +271,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
         WinnersDialogBox();
         break;
     case ID_MENUITEM_NEWGAME:
-        InitializeMines();
+        InitializeNewGame();
         break;
     case ID_MENUITEM_CUSTOM:
         CustomFieldDialogBox();
@@ -360,16 +362,15 @@ __inline void KeyDownHandler(WPARAM wParam) {
 __inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // Shared code...
     SetCapture(hWnd);
-    ClickedBlock.Column = -1;
-    ClickedBlock.Row = -1;
-    HasMouseCapture = 1;
+	ClickedBlock = (BoardPoint) { -1, -1 };
+    HasMouseCapture = TRUE;
     DisplaySmile(SMILE_WOW);
     return MouseMoveHandler(hwnd, uMsg, wParam, lParam);
 }
 
 __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // WM_MOUSEMOVE_Handler!
-    if (HasMouseCapture == 0) {
+    if (!HasMouseCapture) {
         if (CheatPasswordIndex == 0) {
             return DefWindowProcW(hWnd, uMsg, wParam, lParam);
         }
@@ -392,7 +393,7 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
             return FALSE;
         }
     }
-    else if ((dword_1005000 & 1) == 0) {
+    else if ((StateFlags & STATE_GAME_IS_ON) == 0) {
         SomeFunctionINeedToCreate();
     }
     else {
@@ -417,14 +418,14 @@ void HandleRightClick(BoardPoint point) {
             switch (blockState) {
             case BLOCK_STATE_FLAG:
                 blockState = (Mark_InitFile) ? BLOCK_STATE_QUESTION_MARK : BLOCK_STATE_EMPTY_UNCLICKED;
-                AddAndDisplayPoints(1);
+                AddAndDisplayLeftFlags(1);
                 break;
             case BLOCK_STATE_QUESTION_MARK:
                 blockState = BLOCK_STATE_EMPTY_UNCLICKED;
                 break;
             default: // Assume BLOCK_STATE_EMPTY_UNCLICKED
                 blockState = BLOCK_STATE_FLAG;
-                AddAndDisplayPoints(-1);
+                AddAndDisplayLeftFlags(-1);
             }
 
             ChangeBlockState(point, blockState);
@@ -441,26 +442,28 @@ void HandleRightClick(BoardPoint point) {
 void DisplayResult() {
 	if (IsInBoardRange(ClickedBlock)){
         if (NumberOfRevealedBlocks == 0 && TimerSeconds == 0) {
-            // Initialize Timer 
+            // First Click! Initialize Timer 
             PlayGameSound(SOUNDTYPE_TICK);
             TimerSeconds++;
             DisplayTimerSeconds();
             IsTimerOnAndShowed = TRUE;
             
-            if (SetTimer(hWnd, SOUNDTYPE_TICK, 1000, NULL) == 0){
+            if (!SetTimer(hWnd, TIMER_ID, 1000, NULL)){
                 DisplayErrorMessage(ID_TIMER_ERROR);
             }
         }
 
-        if (dword_1005000 == 0){
-            ClickedBlock.Row = -2;
-            ClickedBlock.Column = -2;
+        if (!(StateFlags & STATE_GAME_IS_ON)){
+			// WIERD: Setting this to -2, -2 causes buffer overflow
+			ClickedBlock = (BoardPoint) { -2, -2 };
         }
 
         if (Is3x3Click){
             Handle3x3Click(ClickedBlock);
         }
         else {
+			// WIERD: The buffer overflow occurs here
+			// ClickedBlock might be (-2, -2)
 			BYTE blockValue = ACCESS_BLOCK(ClickedBlock);
 
             if (!(blockValue & BLOCK_IS_REVEALED) && !BLOCK_IS_STATE(blockValue, BLOCK_STATE_FLAG)) {
@@ -478,23 +481,23 @@ void DisplayResult() {
 void NotifyMinimize() {
     FreeSound();
 
-    if ((dword_1005000 & 2) == 0) {
+    if ((StateFlags & STATE_WINDOW_MINIMIZED) == 0) {
         IsTimerOnTemp = IsTimerOnAndShowed;
     }
 
-    if (dword_1005000 & 1) {
+    if (StateFlags & STATE_GAME_IS_ON) {
         IsTimerOnAndShowed = FALSE;
     }
 
-    dword_1005000 |= 2;
+    StateFlags |= STATE_WINDOW_MINIMIZED;
 }
 
-void NotifyRestore() {
-    if (dword_1005000 & 1) {
+void NotifyWindowRestore() {
+    if (StateFlags & STATE_GAME_IS_ON) {
         IsTimerOnAndShowed = IsTimerOnTemp;
     }
     
-    dword_1005000 = 253;
+	StateFlags &= ~(STATE_WINDOW_MINIMIZED);
 }
 
 INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -564,7 +567,8 @@ void Handle3x3Click(BoardPoint point){
                 if (blockValue == BLOCK_STATE_FLAG || !(blockValue & BLOCK_IS_BOMB)) {
 					ExpandEmptyBlock((BoardPoint) { loop_column, loop_row });
                 }
-                else { // has a bomb?
+                else { 
+					// The user clicked a bomb
                     lostGame = TRUE;
 					ChangeBlockState((BoardPoint) { loop_column, loop_row }, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
                 }
@@ -579,7 +583,7 @@ void Handle3x3Click(BoardPoint point){
         }
 
     } else {
-		UpdateClickedBlocksState((BoardPoint) { -2, -2 });
+		ReleaseBlocksClick();
          return;
 
     }
@@ -603,45 +607,47 @@ void ChangeBlockState(BoardPoint point, BYTE blockState) {
     DrawBlock(point);
 }
 
+__inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock) {
+	// The first block! Change a normal block to a bomb, 
+	// Replace the current block into an empty block
+	// Reveal the current block
+	// WIERD: LOOP IS WITHOUT AN EQUAL SIGN
+	for (DWORD current_row = 1; current_row < Height_InitFile2; ++current_row) {
+		for (DWORD current_column = 1; current_column < Width_InitFile2; ++current_column) {
+			PBYTE pLoopBlock = &BlockArray[current_row][current_column];
+
+			// Find the first non-bomb
+			if (!(*pLoopBlock & BLOCK_IS_BOMB)) {
+				// Replace bomb place
+				*pFunctionBlock = BLOCK_STATE_EMPTY_UNCLICKED;
+				*pLoopBlock |= BLOCK_IS_BOMB;
+
+				ExpandEmptyBlock(point);
+				return;
+			}
+		}
+	}
+}
+
 void HandleBlockClick(BoardPoint point) {
 	PBYTE pFunctionBlock = &ACCESS_BLOCK(point);
 
-    // Not a bomb!
+	// Click an empty block
     if (!(*pFunctionBlock & BLOCK_IS_BOMB)) {
         ExpandEmptyBlock(point);
 
         if (NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
             FinishGame(TRUE);
         }
-
-        return;
     }
-    
-    // CLICKED A BOMB
-    if (NumberOfRevealedBlocks != 0) { // Not the first block
-        ChangeBlockState(point, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
-        FinishGame(FALSE);
+	// Clicked bomb and it's the first block 
+    else if (NumberOfRevealedBlocks == 0) { 
+		ReplaceFirstNonBomb(point, pFunctionBlock);
     }
-    else { 
-        // The first block! Change a normal block to a bomb, 
-        // Replace the current block into an empty block
-        // Reveal the current block
-        // WIERD: LOOP IS WITHOUT AN EQUAL SIGN
-        for (DWORD current_row = 1; current_row < Height_InitFile2; ++current_row) {
-            for (DWORD current_column = 1; current_column < Width_InitFile2; ++current_column) {
-				PBYTE pLoopBlock = &BlockArray[current_row][current_column];
-
-                // Find the first non-bomb
-                if (!(*pLoopBlock & BLOCK_IS_BOMB))  {
-                    // Replace bomb place
-                    *pFunctionBlock = BLOCK_STATE_EMPTY_UNCLICKED;
-                    *pLoopBlock |= BLOCK_IS_BOMB;
-
-                    ExpandEmptyBlock(point);
-                    return;
-                }
-            }
-        }
+	// Clicked A Bomb
+    else {  
+		ChangeBlockState(point, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
+		FinishGame(FALSE);
     }
 }
 
@@ -717,7 +723,7 @@ void RedrawUI() {
 
 void RedrawUIOnDC(HDC hDC) {
     DrawHUDRectangles(hDC);
-    DisplayPointsOnDC(hDC);
+    DisplayLeftFlagsOnDC(hDC);
     DisplaySmileOnDC(hDC, GlobalSmileId);
     DisplayTimerSecondsOnDC(hDC);
     DisplayAllBlocksInDC(hDC);
@@ -845,12 +851,12 @@ void FinishGame(BOOL isWon){
     // If the player loses, bombs change into black bombs
     RevealAllBombs((isWon) ? BLOCK_STATE_FLAG : BLOCK_STATE_BLACK_BOMB);
 
-    if (isWon && CurrentPoints != 0){
-        AddAndDisplayPoints(-CurrentPoints);
+    if (isWon && LeftFlags != 0){
+        AddAndDisplayLeftFlags(-LeftFlags);
     }
 
     PlayGameSound(isWon ? SOUNDTYPE_WIN : SOUNDTYPE_LOSE);
-    dword_1005000 = 16;
+    StateFlags = STATE_GAME_FINISHED;
 
     // Check if it is the best time
     if (isWon && Difficulty_InitFile != DIFFICULTY_CUSTOM){
@@ -865,13 +871,13 @@ void FinishGame(BOOL isWon){
 
 void ShowAboutWindow() {
     WCHAR szApp[128];
-    WCHAR szOtherStuff[128];
+    WCHAR szCredits[128];
 
-    LoadResourceString(0xC, szApp, 128);
-    LoadResourceString(0xD, szOtherStuff, 128);
+    LoadResourceString(ID_MINESWEEPER2, szApp, 128);
+    LoadResourceString(ID_CREDITS, szCredits, 128);
     
     HICON hIcon = LoadIconW(hModule, (LPCWSTR)100);
-    ShellAboutW(hWnd, szApp, szOtherStuff, hIcon);
+    ShellAboutW(hWnd, szApp, szCredits, hIcon);
 }
 
 BOOL FindHtmlHelpDLL(PSTR outputLibraryName) {
@@ -900,7 +906,7 @@ BOOL FindHtmlHelpDLL(PSTR outputLibraryName) {
 }
 
 void DisplayHelpWindow(HWND hDesktopWnd, LPCSTR lpChmFilename, UINT uCommand, DWORD_PTR dwData) {
-    if (HtmlHelpModuleHandle == NULL && ErrorLoadingAll == FALSE) {
+    if (HtmlHelpModuleHandle == NULL && ErrorLoadingHelpFunc == FALSE) {
         CHAR libFileName[260];
         
         if (FindHtmlHelpDLL(libFileName)) {
@@ -912,7 +918,7 @@ void DisplayHelpWindow(HWND hDesktopWnd, LPCSTR lpChmFilename, UINT uCommand, DW
         }
 
         if (HtmlHelpModuleHandle == NULL) {
-            ErrorLoadingAll = TRUE;
+            ErrorLoadingHelpFunc = TRUE;
             return;
         }
 
@@ -920,13 +926,13 @@ void DisplayHelpWindow(HWND hDesktopWnd, LPCSTR lpChmFilename, UINT uCommand, DW
             HtmlHelpWPtr = (HTMLHELPWPROC)GetProcAddress(HtmlHelpModuleHandle, (LPCSTR)HtmlHelpW_ExportOrdinal);
 
             if (HtmlHelpWPtr == NULL) {
-                ErrorLoadingAll = TRUE;
+                ErrorLoadingHelpFunc = TRUE;
                 return;
             }
         }
 
-        // Error here.
-        // Using HtmlHelpW with ascii instead of unicode filename.
+        // WIERD!
+        // Using HtmlHelpW with ascii instead of unicode filename???
         HtmlHelpWPtr(hDesktopWnd, (LPCWSTR)lpChmFilename, uCommand, dwData);
     }
 }
@@ -935,14 +941,14 @@ void ShowHelpHtml(DWORD arg0, UINT uCommand) {
     CHAR ChmFilename[250];
 
     if (arg0 == 4) {
-        // Missing NULL Terminator
+        // WIERD: Missing NULL Terminator
         memcpy(ChmFilename, "NTHelp.chm", 10);
     }
     else {
         DWORD dwLength = GetModuleFileNameA(hModule, ChmFilename, sizeof(ChmFilename));
         
         // Point to the last char (the last e of the exe)
-        PSTR copyDest = &ChmFilename[dwLength - 1];;
+        PSTR copyDest = &ChmFilename[dwLength - 1];
         PSTR lastCharPointer = copyDest;
 
         if ((lastCharPointer - ChmFilename) > 4  // the file is at least 5 chars
@@ -950,6 +956,7 @@ void ShowHelpHtml(DWORD arg0, UINT uCommand) {
             copyDest = lastCharPointer - 3;
         }
 
+		// WIERD: Buffer overflow copying ".chm"
         memcpy(copyDest, ".chm", 4);
     }
 
@@ -959,7 +966,7 @@ void ShowHelpHtml(DWORD arg0, UINT uCommand) {
 int GetDlgIntOfRange(HWND hDlg, int nIDDlgItem, int min, int max) {
     
     int result = GetDlgItemInt(hDlg, nIDDlgItem, &nIDDlgItem, FALSE);
-
+	
     if (result < min) {
         return min;
     }
@@ -1261,7 +1268,7 @@ __inline VOID UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldCli
 	DWORD leftColumn = max(1, newClick.Column - 1);
 	DWORD rightColumn = min(Width_InitFile2, newClick.Column + 1);
 
-	// Change old to unclicked
+	// Change old to unclicked. WIERD: Missing bounds check
 	for (DWORD loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
 		for (DWORD loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
 			if ((BlockArray[loop_row][loop_column] & BLOCK_IS_REVEALED) == 0) {
@@ -1298,6 +1305,10 @@ __inline VOID UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldCli
 			}
 		}
 	}
+}
+
+__inline void ReleaseBlocksClick() {
+	UpdateClickedBlocksState((BoardPoint) { -2, -2 });
 }
 
 void UpdateClickedBlocksState(BoardPoint point) {
@@ -1358,14 +1369,13 @@ void DrawBlock(BoardPoint point) {
     ReleaseDC(hWnd, hDC);
 }
 
-// TODO: Add return value
 BOOL HandleLeftClick(DWORD dwLocation) {
     MSG msg;
     RECT rect;
 
     // Copy point into struct
-    msg.pt.y = dwLocation >> 16;
-    msg.pt.x = dwLocation & 0xff;
+	msg.pt.y = HIWORD(dwLocation);
+	msg.pt.x = LOWORD(dwLocation);
 
     // The rect represents the game board
     rect.left = (xRight - 24) / 2;
@@ -1373,19 +1383,31 @@ BOOL HandleLeftClick(DWORD dwLocation) {
     rect.top = 16;
     rect.bottom = 40;
 
+	// Check if the click is in the range of the board
     if (!PtInRect(&rect, msg.pt)) {
         return FALSE;
     }
     
-    // Disable clicking on the game board
+    // Capture mouse events outside the window 
+	//   - to capture MOUSEMOVE and BOTTONUP events 
     SetCapture(hWnd);
     DisplaySmile(SMILE_CLICKED);
-    MapWindowPoints(hWnd, NULL, (LPPOINT)&rect, 2);
+
+
+	// Convert window relative points to screen relative points
+    MapWindowPoints(
+		hWnd, // hWndFrom: Game window
+		NULL, // hWndTo: Desktop screen
+		(LPPOINT)&rect, // lpPoints - 2 points: (left, top), (right, bottom)
+		2 // cPoints
+	);
 
     int ebx = 0;
+	
     while (TRUE) {
         // Wait for a message of this kind
-        while (!PeekMessageW(&msg, hWnd, 0x200, 0x20d, TRUE)) {
+		// Handle WM_MOUSEMOVE, WM_BUTTONUP events
+        while (!PeekMessageW(&msg, hWnd, WM_MOUSEMOVE, WM_XBUTTONDBLCLK, TRUE)) {
         }
         
         switch (msg.message) {
@@ -1405,7 +1427,7 @@ BOOL HandleLeftClick(DWORD dwLocation) {
             if (ebx != 0 && PtInRect(&rect, msg.pt)) {
                 GlobalSmileId = SMILE_NORMAL;
                 DisplaySmile(SMILE_NORMAL);
-                InitializeMines();
+                InitializeNewGame();
             }
 
             ReleaseCapture();
@@ -1544,7 +1566,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     InitializeMenu(Menu_InitFile);
-    InitializeMines();
+    InitializeNewGame();
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
     Minimized = 0;
@@ -1637,7 +1659,7 @@ void FreeSound() {
     }
 }
 
-void InitializeMines() {
+void InitializeNewGame() {
     DWORD flags = MOVE_WINDOW | REPAINT_WINDOW;
 
     if (Width_InitFile == Width_InitFile2 && Height_InitFile == Height_InitFile2) {
@@ -1669,26 +1691,26 @@ void InitializeMines() {
     }
     
     TimerSeconds = 0;
-    CurrentPoints = Mines_Copy;
+    LeftFlags = Mines_Copy;
     NumberOfRevealedBlocks = 0;
     NumberOfEmptyBlocks = (Height_InitFile2 * Width_InitFile2) - Mines_InitFile;
-    dword_1005000 = 1;
-    AddAndDisplayPoints(0); // Should have called DisplayPoints()!
+    StateFlags = STATE_GAME_IS_ON;
+    AddAndDisplayLeftFlags(0); // Should have called DisplayLeftFlags()!
     InitializeWindowBorder(flags);
 }
 
-void AddAndDisplayPoints(DWORD pointsToAdd) {
-    CurrentPoints += pointsToAdd;
-    DisplayPoints();
+void AddAndDisplayLeftFlags(DWORD leftFlagsToAdd) {
+    LeftFlags += leftFlagsToAdd;
+    DisplayLeftFlags();
 }
 
-void DisplayPoints() {
+void DisplayLeftFlags() {
     HDC hDC = GetDC(hWnd);
-    DisplayPointsOnDC(hDC);
+    DisplayLeftFlagsOnDC(hDC);
     ReleaseDC(hWnd, hDC);
 }
 
-void DisplayPointsOnDC(HDC hDC) {
+void DisplayLeftFlagsOnDC(HDC hDC) {
     DWORD layout = GetLayout(hDC);
 
     if (layout & 1) {
@@ -1699,13 +1721,13 @@ void DisplayPointsOnDC(HDC hDC) {
     int lowDigit;
     int highNum;
 
-    if (CurrentPoints >= 0) {
-        lowDigit = CurrentPoints / 100;
-        highNum = CurrentPoints % 100;
+    if (LeftFlags >= 0) {
+        lowDigit = LeftFlags / 100;
+        highNum = LeftFlags % 100;
     }
     else {
         lowDigit = NUM_MINUS;
-        highNum = CurrentPoints % 100;
+        highNum = LeftFlags % 100;
     }
    
     DisplayNumber(hDC, POINT_BIG_NUM_X, lowDigit);
@@ -1959,22 +1981,22 @@ BOOL InitializeBitmapsAndBlockArray() {
 
 void InitializeBlockArrayBorders() {
 	
-    memset(BlockArray, BLOCK_STATE_INITIAL_VALUE, sizeof(BlockArray));
+    memset(BlockArray, BLOCK_STATE_EMPTY_UNCLICKED, sizeof(BlockArray));
 
     for (int column = Width_InitFile2 + 1; column >= 0; column--) {
 		// Fill upper border
-		BlockArray[0][column] = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[0][column] = BLOCK_STATE_BORDER_VALUE;
 
 		// Fill lower border
-		BlockArray[Height_InitFile2 + 1][column] = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[Height_InitFile2 + 1][column] = BLOCK_STATE_BORDER_VALUE;
     }
 
 	for (int row = Height_InitFile2 + 1; row >= 0; row++) {
 		// Fill left border
-		BlockArray[row][0] = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[row][0] = BLOCK_STATE_BORDER_VALUE;
 
 		// Fill right border
-		BlockArray[row][Width_InitFile2 + 1] = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[row][Width_InitFile2 + 1] = BLOCK_STATE_BORDER_VALUE;
 	}
 }
 
