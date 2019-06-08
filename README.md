@@ -3,7 +3,7 @@
 ## Wtf
 
 This project is currently on-going. The purpose of this is to reconstruct the full source code
-of the original windows Minesweeper. 
+of the original windows Minesweeper.
 
 The artifacts of the reverse engineering process:
 
@@ -13,9 +13,12 @@ The artifacts of the reverse engineering process:
 
 Most of the process is done using static analysis without using a decompiler. I wanted to read lots of assembly code.
 
-## Wtf again
+## TODO
 
-I just wanted to completly reverse engineer something so.. yea.
+- Create different source files for different components
+- Create documentation
+- Test code 
+- Check and validate unsigned/signed variables 
 
 ## Nt 4.0 Leak
 
