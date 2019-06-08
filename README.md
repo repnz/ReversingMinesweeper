@@ -3,7 +3,7 @@
 ## Wtf
 
 This project is currently on-going. The purpose of this is to reconstruct the full source code
-of the original windows Minesweeper.
+of the original windows xp Minesweeper. (sha256: bcff89311d792f6428468e813ac6929a346a979f907071c302f418d128eaaf41)
 
 The artifacts of the reverse engineering process:
 
