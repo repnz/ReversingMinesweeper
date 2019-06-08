@@ -15,10 +15,16 @@ DWORD SmileBitmapIndex[5];
 
 HBITMAP BlockBitmaps[16];
 
-// BYTE BlockArray[27][32];
-BYTE BlockArray[864];
+ BYTE BlockArray[27][32];
+//BYTE BlockArray[864];
 
-#define ACCESS_BLOCK(row, column) BlockArray[(row)*32+(column)]
+#define ACCESS_BLOCK(point) (BlockArray[point.Row][point.Column])
+
+
+ typedef struct _BOARD_POINT {
+	 DWORD Column;
+	 DWORD Row;
+ } BoardPoint;
 
 
 int GlobalSmileId;
@@ -61,10 +67,10 @@ HTMLHELPWPROC HtmlHelpWPtr = NULL;
 
 DWORD HelpValue = 0;
 
-DWORD current_location_index;
+DWORD currentLocationIndex;
 
-DWORD RowsList[];
-DWORD RowsList[];
+DWORD RowsList[100];
+DWORD ColumnsList[100];
 
 HelpEntry customFieldHelpData[] = {
     { ID_DIALOG_CUSTOM_FIELD_HEIGHT, 1000},
@@ -80,8 +86,8 @@ BOOL IsTimerOnTemp;
 BOOL IgnoreSingleClick;
 BOOL IsMenuOpen;
 BOOL Is3x3Click;
-DWORD ClickedBlockColumn;
-DWORD ClickedBlockRow;
+
+BoardPoint ClickedBlock;
 
 DWORD HasMouseCapture;
 DWORD CheatPasswordIndex;
@@ -118,7 +124,7 @@ int Tick_InitFile;
 #define TIME_INTERMIDIATE 1
 #define TIME_EXPERT 2
 
-int Time_InitFile[3];
+DWORD Time_InitFile[3];
 
 BOOL Color_InitFile;
 
@@ -130,10 +136,10 @@ HICON hIcon;
 HMENU hMenu;
 
 // Number of blocks
-int Width_InitFile2;
-int Height_InitFile2;
-int Height_InitFile;
-int Width_InitFile;
+DWORD Width_InitFile2;
+DWORD Height_InitFile2;
+DWORD Height_InitFile;
+DWORD Width_InitFile;
 
 // Number of pixels in the window
 int xRight = 0;

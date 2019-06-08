@@ -4,7 +4,7 @@
 extern HKEY hRegistryKey;
 extern LPCWSTR RegistryValuesNames[];
 
-enum RegistryValue {
+typedef enum _RegistryValue {
     Difficulty,
     Mines,
     Height,
@@ -23,7 +23,7 @@ enum RegistryValue {
     Time3,
     BestExpertName,
     AlreadyPlayed
-};
+} RegistryValue;
 
 VOID GetStringFromRegistry(RegistryValue id, LPWSTR lpData);
 

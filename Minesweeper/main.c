@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <stdlib.h>
 #include "resource.h"
 #include "registry.h"
 #include <commctrl.h>
@@ -52,7 +53,7 @@ void DisplayErrorMessage(UINT uID) {
     MessageBoxW(NULL, Buffer, Caption, MB_ICONERROR);
 }
 
-DWORD LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
+VOID LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
     if (!LoadStringW(hModule, uID, lpBuffer, cchBufferMax)) {
         DisplayErrorMessage(1001);
     }
@@ -63,7 +64,7 @@ __inline void SomeFunctionINeedToCreate() {
 	ReleaseCapture();
 
 	if ((dword_1005000 & 1) == 0) {
-		UpdateClickedBlocksState(-2, -2);
+		UpdateClickedBlocksState((BoardPoint) { -2, -2 });
 	}
 	else {
 		DisplayResult();
@@ -93,7 +94,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			return FALSE;
 		}
 
-        if (dword_1005000 & 1 == 0) {
+        if ((dword_1005000 & 1) == 0) {
             Is3x3Click = TRUE;
             return SomeSharedCode(hwnd, uMsg, wParam, lParam);
         }
@@ -109,7 +110,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
 
         if (HasMouseCapture != 0) {
-            UpdateClickedBlocksState(-2, -2);
+			UpdateClickedBlocksState((BoardPoint) { -2, -2 });
             Is3x3Click = TRUE;
             PostMessageW(hWnd, WM_MOUSEMOVE, wParam, lParam);
         }
@@ -117,9 +118,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             SomeSharedCode(hwnd, uMsg, wParam, lParam);
         }
         else if (!IsMenuOpen) {
-            const int column = (LOWORD(lParam) + 4) / 16;
-            const int row = (HIWORD(lParam) - 39) / 16;
-            HandleRightClick(column, row);
+
+            HandleRightClick((BoardPoint) {
+				.Column = (LOWORD(lParam) + 4) / 16,
+				.Row = (HIWORD(lParam) - 39) / 16
+			});
         }
 
         return FALSE;
@@ -129,11 +132,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			IgnoreSingleClick = FALSE;
             return FALSE;
         }
-        if (HandleLeftClick(lParam)) {
+        if (HandleLeftClick((DWORD)lParam)) {
             return 0;
         }
 
-        if (dword_1005000 & 1 == 0) {
+        if ((dword_1005000 & 1) == 0) {
             break;
         }
 
@@ -182,18 +185,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         break;
     case WM_WINDOWPOSCHANGED:
-        if (dword_1005000 & 8 == 0) {
+        if ((dword_1005000 & 8) == 0) {
             WINDOWPOS* pos = (WINDOWPOS*)lParam;
             Xpos_InitFile = pos->x;
             Ypos_InitFile = pos->y;
         }
         break;
     case WM_PAINT:
-        PAINTSTRUCT paint;
-        HDC hDC = BeginPaint(hWnd, &paint);
-        RedrawUIOnDC(hDC);
-        EndPaint(hWnd, &paint);
-        return FALSE;
+	{
+		PAINTSTRUCT paint;
+		HDC hDC = BeginPaint(hWnd, &paint);
+		RedrawUIOnDC(hDC);
+		EndPaint(hWnd, &paint);
+		return FALSE;
+	}
     case WM_TIMER:
         TickSeconds();
         return FALSE;
@@ -203,11 +208,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
-struct DifficultyConfigItem {
+typedef struct _DifficultyConfigItem {
 	DWORD Mines;
 	DWORD Height;
 	DWORD Width;
-};
+} DifficultyConfigItem;
 
 #define BEGINNER_MINES 10
 #define BEGINEER_HEIGHT 9
@@ -355,8 +360,8 @@ __inline void KeyDownHandler(WPARAM wParam) {
 __inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // Shared code...
     SetCapture(hWnd);
-    ClickedBlockColumn = -1;
-    ClickedBlockRow = -1;
+    ClickedBlock.Column = -1;
+    ClickedBlock.Row = -1;
     HasMouseCapture = 1;
     DisplaySmile(SMILE_WOW);
     return MouseMoveHandler(hwnd, uMsg, wParam, lParam);
@@ -370,41 +375,41 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         }
 
         if (CheatPasswordIndex > 5 || (CheatPasswordIndex == 5 && wParam != MK_CONTROL)) {
-            const DWORD xPoint = lParam & 0xff;
-            const DWORD yPoint = lParam >> 16;
+			// Get Mouse Block
+			ClickedBlock = (BoardPoint) {
+				.Column = (LOWORD(lParam) + 4) / 16,
+					.Row = (HIWORD(lParam) - 39) / 16
+			};
 
-            // Get Block Indexes
-            ClickedBlockColumn = (xPoint + 4) / 16;
-            ClickedBlockRow = (yPoint - 39) / 16;
-
-            if (ClickedBlockColumn <= 0 || ClickedBlockRow <= 0 ||
-                Width_InitFile2 > ClickedBlockColumn || Height_InitFile2 > ClickedBlockRow) {
-                return DefWindowProcW(hWnd, uMsg, wParam, lParam);
-            }
+			if (!IsInBoardRange(ClickedBlock)) {
+				return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+			}
 
             HDC hDesktop = GetDC(NULL);
-            BYTE block = BlockArray[ClickedBlockRow * 32 + ClickedBlockColumn];
+			BYTE block = ACCESS_BLOCK(ClickedBlock);
             SetPixel(hDesktop, 0, 0, (block & BLOCK_IS_BOMB) ? BLACK_COLOR : WHITE_COLOR);
 
             return FALSE;
         }
     }
-    else if (dword_1005000 & 1 == 0) {
+    else if ((dword_1005000 & 1) == 0) {
         SomeFunctionINeedToCreate();
     }
     else {
-        const int row = (HIWORD(lParam) - 39) / 16;
-        const int column = (LOWORD(lParam) + 4) / 16;
-        UpdateClickedBlocksState(column, row);
+		// Update Mouse Block
+		UpdateClickedBlocksState((BoardPoint) {
+			.Column = (LOWORD(lParam) + 4) / 16,
+			.Row = (HIWORD(lParam) - 39) / 16
+		});
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
 
 
-void HandleRightClick(int column, int row) {
-	if (IsInBoardRange(column, row))
-        BYTE block = ACCESS_BLOCK(row, column);
+void HandleRightClick(BoardPoint point) {
+	if (IsInBoardRange(point)) {
+        BYTE block = ACCESS_BLOCK(point);
 
         if (!(block & BLOCK_IS_REVEALED)) {
             BYTE blockState = block & BLOCK_STATE_MASK;
@@ -422,7 +427,7 @@ void HandleRightClick(int column, int row) {
                 AddAndDisplayPoints(-1);
             }
 
-            ChangeBlockState(column, row, blockState);
+            ChangeBlockState(point, blockState);
 
             if (BLOCK_IS_STATE(block, BLOCK_STATE_FLAG) &&
                 NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
@@ -434,8 +439,7 @@ void HandleRightClick(int column, int row) {
 
 
 void DisplayResult() {
-    if (ClickedBlockColumn > 0 && ClickedBlockRow > 0 && 
-        ClickedBlockColumn <= Width_InitFile2 && ClickedBlockRow <= Height_InitFile2) {
+	if (IsInBoardRange(ClickedBlock)){
         if (NumberOfRevealedBlocks == 0 && TimerSeconds == 0) {
             // Initialize Timer 
             PlayGameSound(SOUNDTYPE_TICK);
@@ -449,19 +453,18 @@ void DisplayResult() {
         }
 
         if (dword_1005000 == 0){
-            ClickedBlockRow = -2;
-            ClickedBlockColumn = -2;
+            ClickedBlock.Row = -2;
+            ClickedBlock.Column = -2;
         }
 
         if (Is3x3Click){
-            Handle3x3Click(ClickedBlockColumn, ClickedBlockRow);
+            Handle3x3Click(ClickedBlock);
         }
         else {
-            BYTE blockValue = BlockArray[ClickedBlockRow * 32 + ClickedBlockColumn];
-
+			BYTE blockValue = ACCESS_BLOCK(ClickedBlock);
 
             if (!(blockValue & BLOCK_IS_REVEALED) && !BLOCK_IS_STATE(blockValue, BLOCK_STATE_FLAG)) {
-                HandleBlockClick(ClickedBlockColumn, ClickedBlockRow);
+                HandleBlockClick(ClickedBlock);
             }
         }
 
@@ -494,38 +497,50 @@ void NotifyRestore() {
     dword_1005000 = 253;
 }
 
-INT_PTR CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_HELP:
-        HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-        WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
-        return FALSE;
+	{
+		HELPINFO* pHelpInfo = (HELPINFO*)lParam;
+		WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
+		return FALSE;
+	}
     case WM_CONTEXTMENU:
-        WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
-        return FALSE;
+	{
+		WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
+		return FALSE;
+	}
     case WM_INITDIALOG:
-        SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, Height_InitFile, FALSE);
-        SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, Width_InitFile, FALSE);
-        SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, Mines_InitFile, FALSE);
-        return TRUE;
+	{
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, Height_InitFile, FALSE);
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, Width_InitFile, FALSE);
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, Mines_InitFile, FALSE);
+		return TRUE;
+	}
     case WM_COMMAND:
-        switch (LOWORD(wParam)) {
-        case 1:
-        case 100:
-            Height_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, 9, 24);
-            Width_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, 9, 30);
-            int maxMines = min((Height_InitFile-1) * (Width_InitFile-1), 999);
-            Mines_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, 10, maxMines);
-            break;
-        case 2:
-            break;
-        default:
-            return FALSE;
-        }
+	{
+		switch (LOWORD(wParam)) {
+		case 1:
+		case 100:
+		{
+			Height_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, 9, 24);
+			Width_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, 9, 30);
+			int maxMines = min((Height_InitFile - 1) * (Width_InitFile - 1), 999);
+			Mines_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, 10, maxMines);
+		}
+		break;
+		case 2:
+			break;
+		default:
+			return FALSE;
+		}
 
-        EndDialog(hDlg, TRUE);
-        return TRUE;
+		EndDialog(hDlg, TRUE);
+		return TRUE;
+	}
     }
+
+	return FALSE;
 }
 
 void CustomFieldDialogBox() {
@@ -536,22 +551,22 @@ void CustomFieldDialogBox() {
     NeedToSaveConfigToRegistry = TRUE;
 }
 
-void Handle3x3Click(DWORD column, DWORD row){
-    BYTE blockValue = BlockArray[row*32+column];
+void Handle3x3Click(BoardPoint point){
+	BYTE blockValue = ACCESS_BLOCK(point);
 
-    if ((blockValue & BLOCK_IS_REVEALED) && GetFlagBlocksCount(column, row) == blockValue){
+    if ((blockValue & BLOCK_IS_REVEALED) && GetFlagBlocksCount(point) == blockValue){
         BOOL lostGame = FALSE;
 
-        for (int loop_row=(row-1); loop_row<=(row+1); ++loop_row){
-            for (int loop_column=(column-1); loop_column<=(column+1); ++loop_column){
-                BYTE val = BlockArray[loop_row * 32 + loop_column];
+        for (DWORD loop_row=(point.Row-1); loop_row<=(point.Row+1); ++loop_row){
+            for (DWORD loop_column=(point.Column-1); loop_column<=(point.Column+1); ++loop_column){
+				BYTE blockValue = BlockArray[loop_row][loop_column];
 
-                if (val == BLOCK_STATE_FLAG || !(val & BLOCK_IS_BOMB)) {
-                    ExpandEmptyBlock(loop_column, loop_row);
+                if (blockValue == BLOCK_STATE_FLAG || !(blockValue & BLOCK_IS_BOMB)) {
+					ExpandEmptyBlock((BoardPoint) { loop_column, loop_row });
                 }
                 else { // has a bomb?
                     lostGame = TRUE;
-                    ChangeBlockState(loop_column, loop_row, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
+					ChangeBlockState((BoardPoint) { loop_column, loop_row }, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
                 }
             }       
         }
@@ -564,7 +579,7 @@ void Handle3x3Click(DWORD column, DWORD row){
         }
 
     } else {
-         UpdateClickedBlocksState(-2, -2);
+		UpdateClickedBlocksState((BoardPoint) { -2, -2 });
          return;
 
     }
@@ -580,20 +595,20 @@ void TickSeconds() {
     }
 }
 
-void ChangeBlockState(DWORD column, DWORD row, BYTE blockState) {
-	PBYTE pBlock = &ACCESS_BLOCK(row, column);
+void ChangeBlockState(BoardPoint point, BYTE blockState) {
+	PBYTE pBlock = &ACCESS_BLOCK(point);
 
     *pBlock = (*pBlock & 0xE0) | blockState;
 
-    DrawBlock(column, row);
+    DrawBlock(point);
 }
 
-void HandleBlockClick(DWORD column, DWORD row) {
-    PBYTE pFunctionBlock = &BlockArray[row * 32 + column];
+void HandleBlockClick(BoardPoint point) {
+	PBYTE pFunctionBlock = &ACCESS_BLOCK(point);
 
     // Not a bomb!
     if (!(*pFunctionBlock & BLOCK_IS_BOMB)) {
-        ExpandEmptyBlock(column, row);
+        ExpandEmptyBlock(point);
 
         if (NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
             FinishGame(TRUE);
@@ -604,7 +619,7 @@ void HandleBlockClick(DWORD column, DWORD row) {
     
     // CLICKED A BOMB
     if (NumberOfRevealedBlocks != 0) { // Not the first block
-        ChangeBlockState(column, row, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
+        ChangeBlockState(point, BLOCK_IS_REVEALED | BLOCK_STATE_BOMB_RED_BACKGROUND);
         FinishGame(FALSE);
     }
     else { 
@@ -612,9 +627,9 @@ void HandleBlockClick(DWORD column, DWORD row) {
         // Replace the current block into an empty block
         // Reveal the current block
         // WIERD: LOOP IS WITHOUT AN EQUAL SIGN
-        for (int current_row = 1; current_row < Height_InitFile2; ++current_row) {
-            for (int current_column = 1; current_column < Width_InitFile2; ++current_column) {
-				PBYTE pLoopBlock = &ACCESS_BLOCK(current_row, current_column);
+        for (DWORD current_row = 1; current_row < Height_InitFile2; ++current_row) {
+            for (DWORD current_column = 1; current_column < Width_InitFile2; ++current_column) {
+				PBYTE pLoopBlock = &BlockArray[current_row][current_column];
 
                 // Find the first non-bomb
                 if (!(*pLoopBlock & BLOCK_IS_BOMB))  {
@@ -622,7 +637,7 @@ void HandleBlockClick(DWORD column, DWORD row) {
                     *pFunctionBlock = BLOCK_STATE_EMPTY_UNCLICKED;
                     *pLoopBlock |= BLOCK_IS_BOMB;
 
-                    ExpandEmptyBlock(column, row);
+                    ExpandEmptyBlock(point);
                     return;
                 }
             }
@@ -630,27 +645,27 @@ void HandleBlockClick(DWORD column, DWORD row) {
     }
 }
 
-void ExpandEmptyBlock(DWORD column, DWORD row) {
+void ExpandEmptyBlock(BoardPoint point) {
 
-    current_location_index = 1;
-    ShowBlockValue(column, row);
+    currentLocationIndex = 1;
+    ShowBlockValue(point);
 
     int i = 1;
 
-    while (i != current_location_index) {
-        int row = RowsList[i];
-        int column = RowsList[i];
+    while (i != currentLocationIndex) {
+		DWORD row = RowsList[i];
+        DWORD column = ColumnsList[i];
 
-        ShowBlockValue(column - 1, row - 1);
-        ShowBlockValue(column, row - 1);
-        ShowBlockValue(column + 1, row - 1);
+		ShowBlockValue((BoardPoint){ point.Column - 1, point.Row - 1 });
+		ShowBlockValue((BoardPoint){ column, row - 1 });
+		ShowBlockValue((BoardPoint) { column + 1, row - 1 });
 
-        ShowBlockValue(column - 1, row);
-        ShowBlockValue(column + 1, row);
+		ShowBlockValue((BoardPoint) { column - 1, row });
+		ShowBlockValue((BoardPoint) { column + 1, row });
 
-        ShowBlockValue(column - 1, row + 1);
-        ShowBlockValue(column, row + 1);
-        ShowBlockValue(column + 1, row + 1);
+		ShowBlockValue((BoardPoint) { column - 1, row + 1 });
+		ShowBlockValue((BoardPoint) { column, row + 1 });
+		ShowBlockValue((BoardPoint) { column + 1, row + 1 });
         i++;
 
         if (i == 100) {
@@ -660,9 +675,9 @@ void ExpandEmptyBlock(DWORD column, DWORD row) {
     
 }
 
-void ShowBlockValue(DWORD column, DWORD row){
+void ShowBlockValue(BoardPoint point){
 
-    BYTE blockValue = BlockArray[row * 32 + column];
+	BYTE blockValue = ACCESS_BLOCK(point);
 
     if (blockValue & BLOCK_IS_REVEALED){
         return;
@@ -676,18 +691,19 @@ void ShowBlockValue(DWORD column, DWORD row){
 
     NumberOfRevealedBlocks++;
 
-    int cnt = CountNearBombs(column, row);
-    cnt |= BLOCK_IS_REVEALED;
-    BlockArray[row * 32 + column] = cnt;
-    DrawBlock(column, row);
+    int nearBombsCount = CountNearBombs(point);
+    nearBombsCount |= BLOCK_IS_REVEALED;
+	ACCESS_BLOCK(point) = nearBombsCount;
+    DrawBlock(point);
     
-    if (cnt == 0) {
-        RowsList[current_location_index] = row;
-        RowsList[current_location_index] = column;
-        current_location_index++;
+    if (nearBombsCount == 0) {
+        RowsList[currentLocationIndex] = point.Row;
+        ColumnsList[currentLocationIndex] = point.Column;
+
+        currentLocationIndex++;
         
-        if (current_location_index == 100) {
-            current_location_index = 0;
+        if (currentLocationIndex == 100) {
+            currentLocationIndex = 0;
         }
     }    
 }
@@ -772,7 +788,7 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
     
     SetROPWrapper(hDC, white_or_copypen);
 
-    for (int i = 0; i < lines_width; i++) {
+    for (DWORD i = 0; i < lines_width; i++) {
         rect.bottom--;
         MoveToEx(hDC, rect.left, rect.bottom, NULL);
         
@@ -790,7 +806,7 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
         SetROPWrapper(hDC, white_or_copypen ^ 1);
     }
 
-    for (int i = 0; i < lines_width; i++) {
+    for (DWORD i = 0; i < lines_width; i++) {
         rect.bottom++;
         MoveToEx(hDC, rect.left, rect.bottom, NULL);
         rect.left--;
@@ -806,12 +822,12 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
 }
 
 
-int CountNearBombs(int column, int row){
+int CountNearBombs(BoardPoint point){
     int count = 0;
 
-    for (int loop_row = (row-1); loop_row<=(row+1); loop_row++){
-        for (int loop_column = (column - 1); loop_column<=(column+1); loop_column++){
-            if (BlockArray[loop_row*32+loop_column] & BLOCK_IS_BOMB){
+    for (DWORD loop_row = (point.Row-1); loop_row<=(point.Row+1); loop_row++){
+        for (DWORD loop_column = (point.Column - 1); loop_column<=(point.Column+1); loop_column++){
+            if (BlockArray[loop_row][loop_column] & BLOCK_IS_BOMB){
                 count++;
             }
         }
@@ -864,7 +880,7 @@ BOOL FindHtmlHelpDLL(PSTR outputLibraryName) {
 
     // This registry value actually contains the same ActiveX Control DLL "hhctrl.ocx"
     if (!RegOpenKeyExA(HKEY_CLASSES_ROOT,
-        "CLSID\{ADB880A6-D8FF-11CF-9377-00AA003B7A11}\InprocServer32",
+        "CLSID\\{ADB880A6-D8FF-11CF-9377-00AA003B7A11}\\InprocServer32",
         0,
         KEY_READ,
         &hKey
@@ -937,7 +953,7 @@ void ShowHelpHtml(DWORD arg0, UINT uCommand) {
         memcpy(copyDest, ".chm", 4);
     }
 
-    DisplayHelpWindow(GetDesktopWindow(), ChmFilename, uCommand, NULL);
+    DisplayHelpWindow(GetDesktopWindow(), ChmFilename, uCommand, (DWORD_PTR)NULL);
 }
 
 int GetDlgIntOfRange(HWND hDlg, int nIDDlgItem, int min, int max) {
@@ -957,9 +973,9 @@ int GetDlgIntOfRange(HWND hDlg, int nIDDlgItem, int min, int max) {
 
 void RevealAllBombs(BYTE revealedBombsState) {
 
-    for (int loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
-        for (int loop_column = 1; loop_column <= Width_InitFile2; ++loop_column) {
-            PBYTE pBlock = &BlockArray[loop_row * 32 + loop_column];
+    for (DWORD loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
+        for (DWORD loop_column = 1; loop_column <= Width_InitFile2; ++loop_column) {
+            PBYTE pBlock = &BlockArray[loop_row][loop_column];
 
             if (*pBlock & BLOCK_IS_REVEALED) {
                 continue;
@@ -991,12 +1007,12 @@ void DisplayAllBlocks() {
 void DisplayAllBlocksInDC(HDC hDC) {
     int y = 55;
     
-    for (int loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
+    for (DWORD loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
         int x = 12;
 
-        for (int loop_column = 1; loop_column <= Width_InitFile2; loop_column++) {
+        for (DWORD loop_column = 1; loop_column <= Width_InitFile2; loop_column++) {
             // Get the current state of the block
-            BYTE blockValue = BlockArray[loop_row * 32 + loop_column];
+            BYTE blockValue = BlockArray[loop_row][loop_column];
             HDC blockState = BlockStates[blockValue & BLOCK_STATE_MASK];
             
             // Draw the block
@@ -1014,12 +1030,12 @@ void SaveWinnerNameDialogBox(){
 }
 
 
-INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, DWORD lParam){
+INT_PTR CALLBACK SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, WPARAM wParam, LPARAM lParam){
      WCHAR winMsg[128];
 
     if (uMsg == WM_INITDIALOG){
         // Load you have the fastest time message
-        LoadResourceString(Difficulty_InitFile+9, winMsg, __countof(winMsg));
+        LoadResourceString(Difficulty_InitFile+9, winMsg, _countof(winMsg));
 
         // Show the message on the 
         SetDlgItemTextW(hDialog, ID_DIALOG_SAVE_NAME_CONTROL_MSG, winMsg);
@@ -1051,7 +1067,7 @@ INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, D
 
         switch (Difficulty_InitFile){
             case DIFFICULTY_BEGINNER:
-                pWinnerNamePtr = Name1_InitFile
+				pWinnerNamePtr = Name1_InitFile;
                 break;
             case DIFFICULTY_INTERMEDIATE:
                 pWinnerNamePtr = Name2_InitFile;
@@ -1070,42 +1086,47 @@ INT_PTR WINAPI SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, DWORD wParam, D
 }
 
 
-INT_PTR WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam){
+INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam){
     switch (uMsg){
         case WM_HELP:
-            HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-            WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
-            return FALSE;
+		{
+			HELPINFO* pHelpInfo = (HELPINFO*)lParam;
+			WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
+			return FALSE;
+		}
         case WM_CONTEXTMENU:
-            HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-            WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
-            return FALSE;
+		{
+			HELPINFO* pHelpInfo = (HELPINFO*)lParam;
+			WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
+			return FALSE;
+		}
         case WM_INITDIALOG:
             break;
         case WM_COMMAND:
-            DWORD msg = LOWORD(wParam);
+		{
+			DWORD msg = LOWORD(wParam);
 
-            if (msg <= 0){
-                return FALSE;
-            }
+			if (msg <= 0) {
+				return FALSE;
+			}
 
-            if (msg <= 2 || msg == 100 || msg == 109){
-                EndDialog(hDlg, 1);
-                return FALSE;
-            }
+			if (msg <= 2 || msg == 100 || msg == 109) {
+				EndDialog(hDlg, 1);
+				return FALSE;
+			}
 
-            if (msg == ID_DIALOG_WINNERS_BTN_RESET_SCORES){
+			if (msg == ID_DIALOG_WINNERS_BTN_RESET_SCORES) {
 				Time_InitFile[0] = 999;
 				Time_InitFile[1] = 999;
 				Time_InitFile[2] = 999;
 
-                lstrcpyW(Name1_InitFile, AnonymousStr);
-                lstrcpyW(Name2_InitFile, AnonymousStr);
-                lstrcpyW(Name3_InitFile, AnonymousStr);
+				lstrcpyW(Name1_InitFile, AnonymousStr);
+				lstrcpyW(Name2_InitFile, AnonymousStr);
+				lstrcpyW(Name3_InitFile, AnonymousStr);
 
-                NeedToSaveConfigToRegistry = TRUE;
-            }
-
+				NeedToSaveConfigToRegistry = TRUE;
+			}
+		}
         default:
             return FALSE;
     }
@@ -1126,18 +1147,18 @@ void ShowWinnerNameAndTime(HWND hDlg, int nIDDlgItem, int secondsLeft, LPCWSTR l
 
 void WinnersDialogBox(){
     DialogBoxParamW(hModule, (LPCWSTR)ID_DIALOG_WINNERS,
-        hWnd, WinnersDialogProc, NULL);
+        hWnd, WinnersDialogProc, (LPARAM)NULL);
 }
 
 
-DWORD GetFlagBlocksCount(int column, int row){
+DWORD GetFlagBlocksCount(BoardPoint point){
     DWORD flagsCount = 0;
 
     // Search in the sorrunding blocks
-    for (int loop_row=(row-1); loop_row<=(row+1); ++loop_row){
-        for (int loop_column=(column-1); loop_column<=(column+1); ++loop_column){
+    for (DWORD loop_row=(point.Row-1); loop_row<=(point.Row+1); ++loop_row){
+        for (DWORD loop_column=(point.Column-1); loop_column<=(point.Column+1); ++loop_column){
             
-            BYTE blockValue = BlockArray[loop_row*32+loop_column] & BLOCK_STATE_MASK;
+            BYTE blockValue = BlockArray[loop_row][loop_column] & BLOCK_STATE_MASK;
             
             if (blockValue == BLOCK_STATE_FLAG){
                 flagsCount++;
@@ -1203,56 +1224,58 @@ void PlayGameSound(DWORD soundType) {
     PlaySoundW((LPCWSTR)soundResourceId, hModule, SND_ASYNC | SND_RESOURCE);
 }
 
-__inline BOOL IsInBoardRange(DWORD row, DWORD column) {
-	return column > 0 && row > 0 && column <= Width_InitFile2 && row <= Height_InitFile2;
+__inline BOOL IsInBoardRange(BoardPoint point) {
+	return point.Column > 0 && point.Row > 0 && point.Column <= Width_InitFile2 && point.Row <= Height_InitFile2;
 }
 
-__inline VOID UpdateClickedBlocksStateNormal(int column, int row, int oldClickedColumn, int oldClickedRow) {
-	if (IsInBoardRange(oldClickedRow, oldClickedColumn) &&
-		(ACCESS_BLOCK(oldClickedRow, oldClickedColumn) & BLOCK_IS_REVEALED) == 0) {
-		UpdateBlockStateToUnclicked(oldClickedColumn, oldClickedRow);
-		DrawBlock(oldClickedColumn, oldClickedRow);
+__inline VOID UpdateClickedBlocksStateNormal(BoardPoint newClick, BoardPoint oldClick) {
+	if (IsInBoardRange(oldClick) && (ACCESS_BLOCK(oldClick) & BLOCK_IS_REVEALED) == 0) {
+		UpdateBlockStateToUnclicked(oldClick);
+		DrawBlock(oldClick);
 	}
 
-	if (IsInBoardRange(row, column)) {
-		const BYTE block = ACCESS_BLOCK(row, column);
+	if (IsInBoardRange(newClick)) {
+		const BYTE block = ACCESS_BLOCK(newClick);
 
 		if ((block & BLOCK_IS_REVEALED) == 0 && !BLOCK_IS_STATE(block, BLOCK_STATE_FLAG)) {
-			UpdateBlockStateToClicked(ClickedBlockColumn, ClickedBlockRow);
-			DrawBlock(ClickedBlockColumn, ClickedBlockRow);
+			UpdateBlockStateToClicked(ClickedBlock);
+			DrawBlock(ClickedBlock);
 		}
 	}
 }
 
-__inline VOID UpdateClickedBlocksState3x3(int row, int column, int oldClickedColumn, int oldClickedRow) {
-	BOOL isNewLocationInBounds = IsInBoardRange(row, column);
-	BOOL isOldLocationInBounds = IsInBoardRange(oldClickedRow, oldClickedColumn);
+__inline VOID UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldClick) {
+	BOOL isNewLocationInBounds = IsInBoardRange(newClick);
+	BOOL isOldLocationInBounds = IsInBoardRange(oldClick);
 
 	// Get 3x3 bounds for the old and new clicks
-	DWORD oldTopRow = max(1, oldClickedRow - 1);
-	DWORD oldBottomRow = min(Height_InitFile2, oldClickedRow + 1);
-	DWORD topRow = max(1, row - 1);
-	DWORD bottomRow = min(Height_InitFile2, row + 1);
-	DWORD oldLeftColumn = max(1, oldClickedColumn - 1);
-	DWORD oldRightColumn = min(Width_InitFile2, oldClickedColumn + 1);
-	DWORD leftColumn = max(1, column - 1);
-	DWORD rightColumn = min(Width_InitFile2, column + 1);
+	DWORD oldTopRow = max(1, oldClick.Row - 1);
+	DWORD oldBottomRow = min(Height_InitFile2, oldClick.Row + 1);
+
+	DWORD topRow = max(1, newClick.Row - 1);
+	DWORD bottomRow = min(Height_InitFile2, newClick.Row + 1);
+
+	DWORD oldLeftColumn = max(1, oldClick.Column - 1);
+	DWORD oldRightColumn = min(Width_InitFile2, oldClick.Column + 1);
+
+	DWORD leftColumn = max(1, newClick.Column - 1);
+	DWORD rightColumn = min(Width_InitFile2, newClick.Column + 1);
 
 	// Change old to unclicked
-	for (int loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
-		for (int loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
-			if ((ACCESS_BLOCK(loop_row, loop_column) & BLOCK_IS_REVEALED) == 0) {
-				UpdateBlockStateToUnclicked(loop_column, loop_row);
+	for (DWORD loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
+		for (DWORD loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
+			if ((BlockArray[loop_row][loop_column] & BLOCK_IS_REVEALED) == 0) {
+				UpdateBlockStateToUnclicked((BoardPoint) { loop_column, loop_row });
 			}
 		}
 	}
 
 	// Change new to clicked
 	if (isNewLocationInBounds) {
-		for (int loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
-			for (int loop_column = leftColumn; loop_column < column; loop_column++) {
-				if ((ACCESS_BLOCK(loop_row, loop_column) & BLOCK_IS_REVEALED) == 0) {
-					UpdateBlockStateToClicked(loop_column, loop_row);
+		for (DWORD loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
+			for (DWORD loop_column = leftColumn; loop_column < rightColumn; loop_column++) {
+				if ((BlockArray[loop_row][loop_column] & BLOCK_IS_REVEALED) == 0) {
+					UpdateBlockStateToClicked((BoardPoint) { loop_column, loop_row });
 				}
 			}
 		}
@@ -1260,46 +1283,45 @@ __inline VOID UpdateClickedBlocksState3x3(int row, int column, int oldClickedCol
 
 	// Draw old blocks
 	if (isOldLocationInBounds) {
-		for (int loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
-			for (int loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
-				DrawBlock(loop_column, loop_row);
+		for (DWORD loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
+			for (DWORD loop_column = oldLeftColumn; loop_column <= oldRightColumn; ++loop_column) {
+				DrawBlock((BoardPoint) { loop_column, loop_row });
 			}
 		}
 	}
 
 	// Draw new blocks
 	if (isNewLocationInBounds) {
-		for (int loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
-			for (int loop_column = leftColumn; loop_column <= rightColumn; ++loop_column) {
-				DrawBlock(loop_column, loop_row);
+		for (DWORD loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
+			for (DWORD loop_column = leftColumn; loop_column <= rightColumn; ++loop_column) {
+				DrawBlock((BoardPoint) { loop_column, loop_row });
 			}
 		}
 	}
 }
 
-void UpdateClickedBlocksState(int column, int row) {
-    if (column == ClickedBlockColumn && row == ClickedBlockRow) {
+void UpdateClickedBlocksState(BoardPoint point) {
+    if (point.Column == ClickedBlock.Column && point.Row == ClickedBlock.Row) {
         return;
     }
 
-    const int oldClickedColumn = ClickedBlockColumn;
-    const int oldClickedRow = ClickedBlockRow;
-
-    ClickedBlockColumn = column;
-    ClickedBlockRow = row;
-
+	// Save old click point
+	const BoardPoint oldClickPoint = ClickedBlock;
+	
+	// Update new click point
+	ClickedBlock = point;
 
     if (Is3x3Click) {
-		UpdateClickedBlocksState3x3(column, row, oldClickedColumn, oldClickedRow);
+		UpdateClickedBlocksState3x3(point, oldClickPoint);
     }
     else {
-		UpdateClickedBlocksStateNormal(column, row, oldClickedColumn, oldClickedRow);
+		UpdateClickedBlocksStateNormal(point, oldClickPoint);
     }
 
 }
 
-void UpdateBlockStateToClicked(DWORD column, DWORD row) {
-	PBYTE pBlock = &ACCESS_BLOCK(row, column);
+void UpdateBlockStateToClicked(BoardPoint point) {
+	PBYTE pBlock = &ACCESS_BLOCK(point);
     BYTE BlockFlags = *pBlock & BLOCK_STATE_MASK;
 
     if (*pBlock == BLOCK_STATE_QUESTION_MARK) {
@@ -1314,22 +1336,25 @@ void UpdateBlockStateToClicked(DWORD column, DWORD row) {
     *pBlock = (*pBlock & ~BLOCK_STATE_MASK) | BlockFlags;
 }
 
-void UpdateBlockStateToUnclicked(DWORD column, DWORD row) {
-    PBYTE pBlock = &BlockArray[row * 32 + column];
+void UpdateBlockStateToUnclicked(BoardPoint point) {
+	PBYTE pBlock = &ACCESS_BLOCK(point);
     BYTE Block = *pBlock & BLOCK_STATE_MASK;
-    BYTE res = BLOCK_STATE_EMPTY_UNCLICKED;;
+	BYTE res;
 
     if (Block == BLOCK_STATE_CLICKED_QUESTION_MARK || Block == BLOCK_STATE_READ_EMPTY) {
         res = BLOCK_STATE_QUESTION_MARK;
-    }
+	}
+	else {
+		res = BLOCK_STATE_EMPTY_UNCLICKED;
+	}
 
     *pBlock = (Block & BLOCK_STATE_FLAG) | res;
 }
 
-void DrawBlock(int column, int row) {
+void DrawBlock(BoardPoint point) {
     HDC hDC = GetDC(hWnd);
-    BYTE BlockValue = ACCESS_BLOCK(row, column) & BLOCK_STATE_MASK;
-    BitBlt(hDC, column * 16 - 4, row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, BlockStates[BlockValue], 0, 0, SRCCOPY);
+    BYTE BlockValue = ACCESS_BLOCK(point) & BLOCK_STATE_MASK;
+    BitBlt(hDC, point.Column * 16 - 4, point.Row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, BlockStates[BlockValue], 0, 0, SRCCOPY);
     ReleaseDC(hWnd, hDC);
 }
 
@@ -1358,7 +1383,7 @@ BOOL HandleLeftClick(DWORD dwLocation) {
     MapWindowPoints(hWnd, NULL, (LPPOINT)&rect, 2);
 
     int ebx = 0;
-    while (true) {
+    while (TRUE) {
         // Wait for a message of this kind
         while (!PeekMessageW(&msg, hWnd, 0x200, 0x20d, TRUE)) {
         }
@@ -1425,7 +1450,7 @@ void InitializeMenu(DWORD menuFlags) {
     Menu_InitFile = menuFlags;
     InitializeCheckedMenuItems();
     SetMenu(hWnd, (Menu_InitFile & 1) ? NULL : hMenu);
-    InitializeWindowBorder(MOVE_WINDOW)
+	InitializeWindowBorder(MOVE_WINDOW);
 }
 
 
@@ -1538,7 +1563,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SaveConfigToRegistry();
     }
 
-    return msg.wParam
+	return msg.wParam;
 }
 
 
@@ -1579,8 +1604,14 @@ void SetStringInRegistry(RegistryValue regValue, LPCWSTR lpStringValue) {
 }
 
 void SetIntegerInRegistry(RegistryValue regValue, DWORD value) {
-    RegSetValueExW(HKEY_CURRENT_USER,
-        RegistryValuesNames[(DWORD)regValue], 0, REG_DWORD, &value, sizeof(DWORD));
+    RegSetValueExW(
+		HKEY_CURRENT_USER,
+        RegistryValuesNames[(DWORD)regValue],
+		0, 
+		REG_DWORD, 
+		(PBYTE)&value, 
+		sizeof(DWORD)
+	);
 }
 
 void FreePenAndBlocksAndSound() {
@@ -1622,17 +1653,19 @@ void InitializeMines() {
     
     // Setup all the mines
     for (Mines_Copy = 0; Mines_Copy < Mines_InitFile; ++Mines_Copy) {
-        int randomColumn;
-        int randomRow;
+		BoardPoint randomPoint;
         
         // Find a location for the mine
         do {
-            randomColumn = GetRandom(Width_InitFile2) + 1;
-            randomRow = GetRandom(Height_InitFile2) + 1;
-        } while (ACCESS_BLOCK(randomRow, randomColumn) & BLOCK_IS_BOMB);
+			randomPoint = (BoardPoint) {
+				.Column = GetRandom(Width_InitFile2) + 1,
+				.Row = GetRandom(Height_InitFile2) + 1
+			};
+
+        } while (ACCESS_BLOCK(randomPoint) & BLOCK_IS_BOMB);
 		
 		// SET A MINE
-		ACCESS_BLOCK(randomRow, randomColumn) |= BLOCK_IS_BOMB;
+		ACCESS_BLOCK(randomPoint) |= BLOCK_IS_BOMB;
     }
     
     TimerSeconds = 0;
@@ -1814,7 +1847,7 @@ void InitializeConfigFromRegistry() {
 // In the assembly code there are many calls to GetPrivateProfileIntW(). 
 // It is because it is called inside a macro argument.
 // Moreover, the "min" logic is calculated twice, again because it's called inside a macro argument.
-int GetIntegerFromInitFile(RegistryValue regValue, int nDefault, int minValue, int maxValue) {
+int GetIntegerFromInitFile(RegistryValue regValue, int nDefault, DWORD minValue, DWORD maxValue) {
 
 	LPCWSTR lpKeyName = RegistryValuesNames[(DWORD)regValue];
 	
@@ -1930,18 +1963,18 @@ void InitializeBlockArrayBorders() {
 
     for (int column = Width_InitFile2 + 1; column >= 0; column--) {
 		// Fill upper border
-		ACCESS_BLOCK(0, column) = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[0][column] = BLOCK_STATE_EMPTY_UNCLICKED;
 
 		// Fill lower border
-		ACCESS_BLOCK(Height_InitFile2 + 1, column) = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[Height_InitFile2 + 1][column] = BLOCK_STATE_EMPTY_UNCLICKED;
     }
 
 	for (int row = Height_InitFile2 + 1; row >= 0; row++) {
 		// Fill left border
-		ACCESS_BLOCK(row, 0) = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[row][0] = BLOCK_STATE_EMPTY_UNCLICKED;
 
 		// Fill right border
-		ACCESS_BLOCK(row, Width_InitFile2 + 1) = BLOCK_STATE_EMPTY_UNCLICKED;
+		BlockArray[row][Width_InitFile2 + 1] = BLOCK_STATE_EMPTY_UNCLICKED;
 	}
 }
 
@@ -2048,7 +2081,7 @@ __inline void InitializeBitmapIndexes(PDWORD indexesArray, int numberOfBitmaps, 
     }
 }
 
-__inline HGLOBAL TryLoadBitmapResource(DWORD resourceId) {
+__inline HGLOBAL TryLoadBitmapResource(USHORT resourceId) {
     HRSRC hRsrc = FindBitmapResource(resourceId);
 
     if (hRsrc != NULL) {

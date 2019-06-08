@@ -48,7 +48,7 @@
 #define BLOCK_STATE_NUMBER_1 1
 #define BLOCK_STATE_READ_EMPTY 0
 
-#define BLOCK_IS_STATE(Block, State) (Block & BLOCK_STATE_MASK) == State
+#define BLOCK_IS_STATE(Block, State) ((Block & BLOCK_STATE_MASK) == State)
 
 #define BLOCK_WIDTH 16
 #define BLOCK_HEIGHT 16
@@ -59,10 +59,10 @@
 #define BLACK_COLOR 0
 #define WHITE_COLOR 0x00FFFFFF
 
-struct HelpEntry {
+typedef struct _HelpEntry {
     DWORD ControlIdentifier;
     DWORD ContextIdentifier;
-};
+} HelpEntry;
 
 #define HtmlHelpW_ExportOrdinal 0x0E
 
