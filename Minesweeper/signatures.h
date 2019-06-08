@@ -50,7 +50,7 @@ void SetIntegerInRegistry(RegistryValue regValue, DWORD value);
 void FreePenAndBlocksAndSound();
 void FreePenAndBlocks();
 void FreeSound();
-__inline LRESULT SomeSharedCode(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+__inline LRESULT CaptureMouseInput(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 HRSRC FindBitmapResource(USHORT resourceId);
 __inline BOOL LoadBitmapResources();
