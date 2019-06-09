@@ -124,13 +124,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="drawing.cpp" />
+    <ClCompile Include="game.cpp" />
+    <ClCompile Include="help.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="sound.cpp" />
+    <ClCompile Include="utils.cpp" />
+    <ClCompile Include="windowing.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="drawing.h" />
     <ClInclude Include="enums.h" />
-    <ClInclude Include="globals.h" />
+    <ClInclude Include="game.h" />
+    <ClInclude Include="help.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="signatures.h" />
+    <ClInclude Include="sound.h" />
+    <ClInclude Include="utils.h" />
+    <ClInclude Include="windowing.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="LAYOUT.md" />

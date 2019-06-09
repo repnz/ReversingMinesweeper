@@ -97,26 +97,7 @@ typedef struct _BOARD_POINT {
 #define REPAINT_WINDOW 4
 
 
-typedef enum _RegistryValue {
-	Difficulty,
-	Mines,
-	Height,
-	Width,
-	Xpos,
-	Ypos,
-	Sound,
-	Mark,
-	Menu,
-	Tick,
-	Color,
-	Time1,
-	Name1,
-	Time2,
-	Name2,
-	Time3,
-	BestExpertName,
-	AlreadyPlayed
-} RegistryValue;
+
 
 typedef struct _DifficultyConfigItem {
 	DWORD Mines;
