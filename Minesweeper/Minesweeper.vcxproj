@@ -125,14 +125,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
-    <ClCompile Include="registry.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="enums.h" />
     <ClInclude Include="globals.h" />
-    <ClInclude Include="registry.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="signatures.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LAYOUT.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

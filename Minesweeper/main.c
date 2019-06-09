@@ -1,14 +1,13 @@
 #include <Windows.h>
 #include <stdlib.h>
 #include "resource.h"
-#include "registry.h"
 #include <commctrl.h>
 #include <WinUser.h>
 #include "enums.h"
 #include "globals.h"
 #include "signatures.h"
 
-void InitializeA();
+
 
 DWORD SimpleGetSystemMetrics(DWORD val) {
     DWORD result;
@@ -66,6 +65,7 @@ __inline void ReleaseMouseCapture() {
 	ReleaseCapture();
 
 	if (StateFlags & STATE_GAME_IS_ON) {
+		// Mouse move always gets here
 		ReleaseBlocksClick();		
 	}
 	else {
@@ -209,30 +209,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
 }
-
-typedef struct _DifficultyConfigItem {
-	DWORD Mines;
-	DWORD Height;
-	DWORD Width;
-} DifficultyConfigItem;
-
-#define BEGINNER_MINES 10
-#define BEGINEER_HEIGHT 9
-#define BEGINNER_WIDTH 9
-
-#define INTERMIDIATE_MINES 40
-#define INTERMIDIATE_HEIGHT 16
-#define INTERMIDIATE_WIDTH 16
-
-#define EXPERT_MINES 99
-#define EXPERT_HEIGHT 16
-#define EXPERT_WIDTH 30
-
-DifficultyConfigItem DifficultyConfigTable[] = {
-	{ BEGINNER_MINES, BEGINEER_HEIGHT, BEGINNER_WIDTH },
-	{ INTERMIDIATE_MINES, INTERMIDIATE_HEIGHT, INTERMIDIATE_WIDTH },
-	{ EXPERT_MINES, EXPERT_HEIGHT, EXPERT_WIDTH }
-};
 
 __inline BOOL MenuHandler(WORD menuItem) {
 
@@ -379,7 +355,7 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 			// Get Mouse Block
 			ClickedBlock = (BoardPoint) {
 				.Column = (LOWORD(lParam) + 4) / 16,
-					.Row = (HIWORD(lParam) - 39) / 16
+				.Row = (HIWORD(lParam) - 39) / 16
 			};
 
 			if (!IsInBoardRange(ClickedBlock)) {
@@ -393,7 +369,7 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
             return FALSE;
         }
     }
-    else if ((StateFlags & STATE_GAME_IS_ON) == 0) {
+    else if (!(StateFlags & STATE_GAME_IS_ON)) {
         ReleaseMouseCapture();
     }
     else {
@@ -439,6 +415,8 @@ void HandleRightClick(BoardPoint point) {
 }
 
 
+// Called when a button is released and the game is on
+//
 void DisplayResult() {
 	if (IsInBoardRange(ClickedBlock)){
         if (NumberOfRevealedBlocks == 0 && TimerSeconds == 0) {
@@ -505,12 +483,12 @@ INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
     case WM_HELP:
 	{
 		HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-		WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
+		WinHelpW((HWND)pHelpInfo->hItemHandle, winmineHelp, HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
 		return FALSE;
 	}
     case WM_CONTEXTMENU:
 	{
-		WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
+		WinHelpW((HWND)wParam, winmineHelp, HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
 		return FALSE;
 	}
     case WM_INITDIALOG:
@@ -640,7 +618,7 @@ void HandleBlockClick(BoardPoint point) {
             FinishGame(TRUE);
         }
     }
-	// Clicked bomb and it's the first block 
+	// Clicked a bomb and it's the first block 
     else if (NumberOfRevealedBlocks == 0) { 
 		ReplaceFirstNonBomb(point, pFunctionBlock);
     }
@@ -653,12 +631,12 @@ void HandleBlockClick(BoardPoint point) {
 
 void ExpandEmptyBlock(BoardPoint point) {
 
-    currentLocationIndex = 1;
+    CurrentRowColumnListIndex = 1;
     ShowBlockValue(point);
 
     int i = 1;
 
-    while (i != currentLocationIndex) {
+    while (i != CurrentRowColumnListIndex) {
 		DWORD row = RowsList[i];
         DWORD column = ColumnsList[i];
 
@@ -691,7 +669,7 @@ void ShowBlockValue(BoardPoint point){
 
     BYTE state = blockValue & BLOCK_STATE_MASK;
 
-    if (state == 0x10 || state == BLOCK_STATE_FLAG) {
+    if (state == BLOCK_STATE_BORDER_VALUE || state == BLOCK_STATE_FLAG) {
         return;
     }
 
@@ -703,13 +681,13 @@ void ShowBlockValue(BoardPoint point){
     DrawBlock(point);
     
     if (nearBombsCount == 0) {
-        RowsList[currentLocationIndex] = point.Row;
-        ColumnsList[currentLocationIndex] = point.Column;
+        RowsList[CurrentRowColumnListIndex] = point.Row;
+        ColumnsList[CurrentRowColumnListIndex] = point.Column;
 
-        currentLocationIndex++;
+        CurrentRowColumnListIndex++;
         
-        if (currentLocationIndex == 100) {
-            currentLocationIndex = 0;
+        if (CurrentRowColumnListIndex == 100) {
+            CurrentRowColumnListIndex = 0;
         }
     }    
 }
@@ -1098,13 +1076,13 @@ INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
         case WM_HELP:
 		{
 			HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-			WinHelpW((HWND)pHelpInfo->hItemHandle, L"winmine.hlp", HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
+			WinHelpW((HWND)pHelpInfo->hItemHandle, winmineHelp, HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
 			return FALSE;
 		}
         case WM_CONTEXTMENU:
 		{
 			HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-			WinHelpW((HWND)wParam, L"winmine.hlp", HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
+			WinHelpW((HWND)wParam, winmineHelp, HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
 			return FALSE;
 		}
         case WM_INITDIALOG:
@@ -1496,7 +1474,7 @@ void SetMenuItemState(DWORD uID, BOOL isChecked) {
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     hModule = hInstance;
-    InitializeA();
+    InitMetricsAndFirstGame();
 
     if (nCmdShow == SW_SHOWMINNOACTIVE || nCmdShow == SW_SHOWMINIMIZED) {
         Minimized = TRUE;
@@ -1744,7 +1722,7 @@ int GetRandom(DWORD maxValue) {
 }
 
 
-void InitializeA() {
+void InitMetricsAndFirstGame() {
 
     //
     // Initialize The Random Seed
@@ -2136,4 +2114,42 @@ HRSRC FindBitmapResource(USHORT resourceId) {
     }
 
     return FindResourceW(hModule, (LPCWSTR)(resourceId), (LPWSTR)RT_BITMAP);
+}
+
+// .text: 1002B80
+VOID LoadValue(RegistryValue id, LPWSTR lpData) {
+	LPCWSTR lpValueName = RegistryValuesNames[(DWORD)id];
+	DWORD cbData = 64;
+
+	if (RegQueryValueExW(
+		hRegistryKey,
+		lpValueName,
+		NULL,
+		NULL,
+		(LPBYTE)lpData,
+		&cbData) != 0) {
+
+		lstrcpyW(lpData, AnonymousStr);
+
+	}
+}
+
+// .text: 
+int GetIntegerFromRegistry(RegistryValue regValue, int defaultValue, int minValue, int maxValue) {
+	DWORD cbData = 4;
+	int Data;
+
+	if (!RegQueryValueExW(hRegistryKey, RegistryValuesNames[(DWORD)regValue], NULL, NULL, (LPBYTE)&Data, &cbData)) {
+		return defaultValue;
+	}
+
+	if (min(maxValue, Data) < minValue) {
+		return minValue;
+	}
+
+	if (maxValue < Data) {
+		return maxValue;
+	}
+
+	return Data;
 }

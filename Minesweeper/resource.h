@@ -80,11 +80,3 @@
 #define ID_BITMAP_BLOCK 410
 #define ID_BITMAP_NUMBERS 420
 #define ID_BITMAP_SMILES 430
-
-WCHAR AnonymousStr[32];
-
-// .data: 01005AA0
-WCHAR ClassName[32];
-
-// .data: 01005AE0
-WCHAR SecondsLeftBuffer[32];
