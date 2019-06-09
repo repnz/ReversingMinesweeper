@@ -1,5 +1,5 @@
 ### Legal issues?
 I don't think someone cares about it.. Anyway I don't know enough about the legal issues
-this might cause, If someone sees any problem talk with me.
+this might cause (reverse engineering stuff might be illegal idk), If someone sees any problem talk with me:)
 
-Anyway, this is done for educational purposes only..
+Anyway, this project is for educational purposes only
