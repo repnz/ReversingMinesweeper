@@ -19,6 +19,10 @@ Most of the process is done using static analysis without using a decompiler. I 
 - Create documentation
 - Test code 
 - Check and validate unsigned/signed variables 
+- Create a remote Minesweeper Hacking Tool - 
+  - Configure bombs
+  - Configure timer
+  - Remove some constraints
 
 ## Nt 4.0 Leak
 
