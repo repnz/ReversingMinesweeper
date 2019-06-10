@@ -35,8 +35,3 @@ been leaked - So we have a peek at the original source back then.
 
 After I finished the project, I compared the source code from my reversing to the leaked source, you can see it's almost identical,
 so yay.
-
-## Legal issues?
-
-I don't think someone cares about it.. Anyway I don't know enough about the legal issues this might cause,
-If someone sees any problem talk with me.
