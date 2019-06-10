@@ -10,14 +10,14 @@ DWORD StopAllSound() {
 }
 
 void FreeSound() {
-	if (Sound_InitFile == 3) {
+	if (GameConfig.Sound == 3) {
 		// Stop all music
 		PlaySoundW(0, 0, SND_PURGE);
 	}
 }
 
 void PlayGameSound(DWORD soundType) {
-	if (Sound_InitFile != SOUND_ON) {
+	if (GameConfig.Sound != SOUND_ON) {
 		return;
 	}
 

@@ -37,8 +37,8 @@ DWORD ColumnsList[100];
 int Mines_Copy;
 // TODO: What is the difference between those variables
 // TODO: Make sure I did not confuse these variables
-DWORD Width_InitFile2;
-DWORD Height_InitFile2;
+DWORD Width;
+DWORD Height;
 BYTE BlockArray[27][32];
 #define ACCESS_BLOCK(point) (BlockArray[point.Row][point.Column])
 
@@ -63,46 +63,46 @@ void InitializeBlockArrayBorders() {
 
 	memset(BlockArray, BLOCK_STATE_EMPTY_UNCLICKED, sizeof(BlockArray));
 
-	for (int column = Width_InitFile2 + 1; column >= 0; column--) {
+	for (int column = Width + 1; column >= 0; column--) {
 		// Fill upper border
 		BlockArray[0][column] = BLOCK_STATE_BORDER_VALUE;
 
 		// Fill lower border
-		BlockArray[Height_InitFile2 + 1][column] = BLOCK_STATE_BORDER_VALUE;
+		BlockArray[Height + 1][column] = BLOCK_STATE_BORDER_VALUE;
 	}
 
-	for (int row = Height_InitFile2 + 1; row >= 0; row++) {
+	for (int row = Height + 1; row >= 0; row++) {
 		// Fill left border
 		BlockArray[row][0] = BLOCK_STATE_BORDER_VALUE;
 
 		// Fill right border
-		BlockArray[row][Width_InitFile2 + 1] = BLOCK_STATE_BORDER_VALUE;
+		BlockArray[row][Width + 1] = BLOCK_STATE_BORDER_VALUE;
 	}
 }
 
 void InitializeNewGame() {
 	DWORD flags = MOVE_WINDOW | REPAINT_WINDOW;
 
-	if (Width_InitFile == Width_InitFile2 && Height_InitFile == Height_InitFile2) {
+	if (GameConfig.Width == Width && GameConfig.Height == Height) {
 		flags = REPAINT_WINDOW;
 	}
 
-	Width_InitFile2 = Width_InitFile;
-	Height_InitFile2 = Height_InitFile;
+	Width = GameConfig.Width;
+	Height = GameConfig.Height;
 
 	InitializeBlockArrayBorders();
 
 	GlobalSmileId = 0;
 
 	// Setup all the mines
-	for (Mines_Copy = 0; Mines_Copy < Mines_InitFile; ++Mines_Copy) {
+	for (Mines_Copy = 0; Mines_Copy < GameConfig.Mines; ++Mines_Copy) {
 		BoardPoint randomPoint;
 
 		// Find a location for the mine
 		do {
 			randomPoint = (BoardPoint) {
-				.Column = GetRandom(Width_InitFile2) + 1,
-					.Row = GetRandom(Height_InitFile2) + 1
+				.Column = GetRandom(Width) + 1,
+					.Row = GetRandom(Height) + 1
 			};
 
 		} while (ACCESS_BLOCK(randomPoint) & BLOCK_IS_BOMB);
@@ -114,7 +114,7 @@ void InitializeNewGame() {
 	TimerSeconds = 0;
 	LeftFlags = Mines_Copy;
 	NumberOfRevealedBlocks = 0;
-	NumberOfEmptyBlocks = (Height_InitFile2 * Width_InitFile2) - Mines_InitFile;
+	NumberOfEmptyBlocks = (Height * Width) - GameConfig.Mines;
 	StateFlags = STATE_GAME_IS_ON;
 	AddAndDisplayLeftFlags(0); // Should have called DisplayLeftFlags()!
 	InitializeWindowBorder(flags);
@@ -122,8 +122,8 @@ void InitializeNewGame() {
 
 void RevealAllBombs(BYTE revealedBombsState) {
 
-	for (DWORD loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
-		for (DWORD loop_column = 1; loop_column <= Width_InitFile2; ++loop_column) {
+	for (DWORD loop_row = 1; loop_row <= Height; ++loop_row) {
+		for (DWORD loop_column = 1; loop_column <= Width; ++loop_column) {
 			PBYTE pBlock = &BlockArray[loop_row][loop_column];
 
 			if (*pBlock & BLOCK_IS_REVEALED) {
@@ -169,7 +169,7 @@ DWORD GetFlagBlocksCount(BoardPoint point) {
 
 
 __inline BOOL IsInBoardRange(BoardPoint point) {
-	return point.Column > 0 && point.Row > 0 && point.Column <= Width_InitFile2 && point.Row <= Height_InitFile2;
+	return point.Column > 0 && point.Row > 0 && point.Column <= Width && point.Row <= Height;
 }
 
 __inline VOID UpdateClickedBlocksStateNormal(BoardPoint newClick, BoardPoint oldClick) {
@@ -194,16 +194,16 @@ __inline VOID UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldCli
 
 	// Get 3x3 bounds for the old and new clicks
 	DWORD oldTopRow = max(1, oldClick.Row - 1);
-	DWORD oldBottomRow = min(Height_InitFile2, oldClick.Row + 1);
+	DWORD oldBottomRow = min(Height, oldClick.Row + 1);
 
 	DWORD topRow = max(1, newClick.Row - 1);
-	DWORD bottomRow = min(Height_InitFile2, newClick.Row + 1);
+	DWORD bottomRow = min(Height, newClick.Row + 1);
 
 	DWORD oldLeftColumn = max(1, oldClick.Column - 1);
-	DWORD oldRightColumn = min(Width_InitFile2, oldClick.Column + 1);
+	DWORD oldRightColumn = min(Width, oldClick.Column + 1);
 
 	DWORD leftColumn = max(1, newClick.Column - 1);
-	DWORD rightColumn = min(Width_InitFile2, newClick.Column + 1);
+	DWORD rightColumn = min(Width, newClick.Column + 1);
 
 	// Change old to unclicked. WIERD: Missing bounds check
 	for (DWORD loop_row = oldTopRow; loop_row <= oldBottomRow; loop_row++) {
@@ -316,9 +316,9 @@ void FinishGame(BOOL isWon) {
 	StateFlags = STATE_GAME_FINISHED;
 
 	// Check if it is the best time
-	if (isWon && Difficulty_InitFile != DIFFICULTY_CUSTOM) {
-		if (TimerSeconds < Time_InitFile[Difficulty_InitFile]) {
-			Time_InitFile[Difficulty_InitFile] = TimerSeconds;
+	if (isWon && GameConfig.Difficulty != DIFFICULTY_CUSTOM) {
+		if (TimerSeconds < GameConfig.Times[GameConfig.Difficulty]) {
+			GameConfig.Times[GameConfig.Difficulty] = TimerSeconds;
 			SaveWinnerNameDialogBox();
 			WinnersDialogBox();
 		}
@@ -399,7 +399,7 @@ void HandleRightClick(BoardPoint point) {
 
 			switch (blockState) {
 			case BLOCK_STATE_FLAG:
-				blockState = (Mark_InitFile) ? BLOCK_STATE_QUESTION_MARK : BLOCK_STATE_EMPTY_UNCLICKED;
+				blockState = (GameConfig.Mark) ? BLOCK_STATE_QUESTION_MARK : BLOCK_STATE_EMPTY_UNCLICKED;
 				AddAndDisplayLeftFlags(1);
 				break;
 			case BLOCK_STATE_QUESTION_MARK:
@@ -544,8 +544,8 @@ __inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock) {
 	// Replace the current block into an empty block
 	// Reveal the current block
 	// WIERD: LOOP IS WITHOUT AN EQUAL SIGN
-	for (DWORD current_row = 1; current_row < Height_InitFile2; ++current_row) {
-		for (DWORD current_column = 1; current_column < Width_InitFile2; ++current_column) {
+	for (DWORD current_row = 1; current_row < Height; ++current_row) {
+		for (DWORD current_column = 1; current_column < Width; ++current_column) {
 			PBYTE pLoopBlock = &BlockArray[current_row][current_column];
 
 			// Find the first non-bomb

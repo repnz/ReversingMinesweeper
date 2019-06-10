@@ -43,7 +43,7 @@ HDC BlockStates[16];
 HRSRC FindBitmapResource(USHORT resourceId) {
 	// If there is no color, 
 	// Get the next resource which is color-less
-	if (!Color_InitFile) {
+	if (!GameConfig.Color) {
 		resourceId++;
 	}
 
@@ -65,7 +65,7 @@ BOOL LoadBitmaps() {
 }
 
 __inline void InitializePen() {
-	if (Color_InitFile) {
+	if (GameConfig.Color) {
 		hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
 	}
 	else {
@@ -122,7 +122,7 @@ __inline void InitializeBitmapsIndexes() {
 #define COLORED_BMP_START 104
 #define NONCOLORED_BMP_START 48
 
-	const DWORD bitmapStartIndex = (Color_InitFile) ? COLORED_BMP_START : NONCOLORED_BMP_START;
+	const DWORD bitmapStartIndex = (GameConfig.Color) ? COLORED_BMP_START : NONCOLORED_BMP_START;
 
 	InitializeBitmapIndexes(
 		BlockBitmapIndex,           // indexesArray
@@ -297,10 +297,10 @@ void DisplayAllBlocks() {
 void DisplayAllBlocksInDC(HDC hDC) {
 	int y = 55;
 
-	for (DWORD loop_row = 1; loop_row <= Height_InitFile2; ++loop_row) {
+	for (DWORD loop_row = 1; loop_row <= Height; ++loop_row) {
 		int x = 12;
 
-		for (DWORD loop_column = 1; loop_column <= Width_InitFile2; loop_column++) {
+		for (DWORD loop_column = 1; loop_column <= Width; loop_column++) {
 			// Get the current state of the block
 			BYTE blockValue = BlockArray[loop_row][loop_column];
 			HDC blockState = BlockStates[blockValue & BLOCK_STATE_MASK];
@@ -427,7 +427,7 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
 }
 
 int GetBitmapByteLength(int a, int b) {
-	int colorDepth = (Color_InitFile) ? 4 : 1;
+	int colorDepth = (GameConfig.Color) ? 4 : 1;
 	colorDepth = (colorDepth * a + 31) / 8;
 	// Clear those bits: 0b11
 	colorDepth &= ~0b11;

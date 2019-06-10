@@ -134,7 +134,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="drawing.h" />
-    <ClInclude Include="enums.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="help.h" />
     <ClInclude Include="config.h" />

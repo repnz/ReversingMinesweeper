@@ -1,4 +1,5 @@
 #include "config.h"
+#include "resource.h"
 
 Config GameConfig;
 
@@ -38,23 +39,23 @@ void SaveConfigToRegistry() {
 	DWORD dwDisposition;
 	RegCreateKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, 0, 0, KEY_WRITE, 0, &hRegistryKey, &dwDisposition);
 
-	SetIntegerInRegistry(Difficulty, Difficulty_InitFile);
-	SetIntegerInRegistry(Height, Height_InitFile);
-	SetIntegerInRegistry(Width, Width_InitFile);
-	SetIntegerInRegistry(Mines, Mines_InitFile);
-	SetIntegerInRegistry(Mark, Mark_InitFile);
+	SetIntegerInRegistry(Difficulty, GameConfig.Difficulty);
+	SetIntegerInRegistry(Height, GameConfig.Height);
+	SetIntegerInRegistry(Width, GameConfig.Width);
+	SetIntegerInRegistry(Mines, GameConfig.Mines);
+	SetIntegerInRegistry(Mark, GameConfig.Mark);
 	SetIntegerInRegistry(AlreadyPlayed, TRUE);
-	SetIntegerInRegistry(Color, Color_InitFile);
-	SetIntegerInRegistry(Sound, Sound_InitFile);
-	SetIntegerInRegistry(Xpos, Xpos_InitFile);
-	SetIntegerInRegistry(Ypos, Ypos_InitFile);
-	SetIntegerInRegistry(Time1, Time_InitFile[0]);
-	SetIntegerInRegistry(Time2, Time_InitFile[1]);
-	SetIntegerInRegistry(Time3, Time_InitFile[2]);
+	SetIntegerInRegistry(Color, GameConfig.Color);
+	SetIntegerInRegistry(Sound, GameConfig.Sound);
+	SetIntegerInRegistry(Xpos, GameConfig.Xpos);
+	SetIntegerInRegistry(Ypos, GameConfig.Ypos);
+	SetIntegerInRegistry(Time1, GameConfig.Times[0]);
+	SetIntegerInRegistry(Time2, GameConfig.Times[1]);
+	SetIntegerInRegistry(Time3, GameConfig.Times[2]);
 
-	SetStringInRegistry(Name1, Name1_InitFile);
-	SetStringInRegistry(Name2, Name2_InitFile);
-	SetStringInRegistry(BestExpertName, Name3_InitFile);
+	SetStringInRegistry(Name1, GameConfig.Names[0]);
+	SetStringInRegistry(Name2, GameConfig.Names[1]);
+	SetStringInRegistry(BestExpertName, GameConfig.Names[2]);
 
 	RegCloseKey(hRegistryKey);
 }
@@ -101,35 +102,35 @@ void InitializeConfigFromRegistry() {
 
 	RegCreateKeyExW(HKEY_CURRENT_USER, lpSubKey, 0, NULL, 0, KEY_READ, NULL, &hRegistryKey, &dwDisposition);
 
-	Height_InitFile = GetIntegerFromRegistry(Height, 9, 9, 25);
-	Height_InitFile2 = Height_InitFile;
-	Width_InitFile = GetIntegerFromRegistry(Width, 9, 9, 25);
-	Width_InitFile2 = Width_InitFile;
-	Difficulty_InitFile = GetIntegerFromRegistry(Difficulty, 0, 0, 3);
-	Mines_InitFile = GetIntegerFromRegistry(Mines, 10, 10, 999);
-	Xpos_InitFile = GetIntegerFromRegistry(Xpos, 80, 0, 1024);
-	Ypos_InitFile = GetIntegerFromRegistry(Ypos, 80, 0, 1024);
-	Sound_InitFile = GetIntegerFromRegistry(Sound, 0, 0, 3);
-	Mark_InitFile = GetIntegerFromRegistry(Mark, 1, 0, 1);
+	GameConfig.Height = GetIntegerFromRegistry(Height, 9, 9, 25);
+	Height = GameConfig.Height;
+	GameConfig.Width = GetIntegerFromRegistry(Width, 9, 9, 25);
+	Width = GameConfig.Width;
+	GameConfig.Difficulty = GetIntegerFromRegistry(Difficulty, 0, 0, 3);
+	GameConfig.Mines = GetIntegerFromRegistry(Mines, 10, 10, 999);
+	GameConfig.Xpos = GetIntegerFromRegistry(Xpos, 80, 0, 1024);
+	GameConfig.Ypos = GetIntegerFromRegistry(Ypos, 80, 0, 1024);
+	GameConfig.Sound = GetIntegerFromRegistry(Sound, 0, 0, 3);
+	GameConfig.Mark = GetIntegerFromRegistry(Mark, 1, 0, 1);
 	Tick_InitFile = GetIntegerFromRegistry(Tick, 0, 0, 1);
 	Menu_InitFile = GetIntegerFromRegistry(Menu, 0, 0, 2);
-	Time_InitFile[TIME_BEGINNER] = GetIntegerFromRegistry(Time1, 999, 0, 999);
-	Time_InitFile[TIME_INTERMIDIATE] = GetIntegerFromRegistry(Time2, 999, 0, 999);
-	Time_InitFile[TIME_EXPERT] = GetIntegerFromRegistry(Time3, 999, 0, 999);
+	GameConfig.Times[TIME_BEGINNER] = GetIntegerFromRegistry(Time1, 999, 0, 999);
+	GameConfig.Times[TIME_INTERMIDIATE] = GetIntegerFromRegistry(Time2, 999, 0, 999);
+	GameConfig.Times[TIME_EXPERT] = GetIntegerFromRegistry(Time3, 999, 0, 999);
 
-	GetStringFromRegistry(Name1, Name1_InitFile);
-	GetStringFromRegistry(Name2, Name2_InitFile);
-	GetStringFromRegistry(BestExpertName, Name3_InitFile);
+	GetStringFromRegistry(Name1, GameConfig.Names[0]);
+	GetStringFromRegistry(Name2, GameConfig.Names[1]);
+	GetStringFromRegistry(BestExpertName, GameConfig.Names[2]);
 
 	HDC hDC = GetDC(GetDesktopWindow());
 
 	int desktopColors = GetDeviceCaps(hDC, NUMCOLORS);
-	Color_InitFile = GetIntegerFromInitFile(Color, (desktopColors == 2) ? 0 : 1, 0, 1);
+	GameConfig.Color = GetIntegerFromInitFile(Color, (desktopColors == 2) ? 0 : 1, 0, 1);
 
 	ReleaseDC(GetDesktopWindow(), hDC);
 
-	if (Sound_InitFile == 3) {
-		Sound_InitFile = StopAllSound();
+	if (GameConfig.Sound == 3) {
+		GameConfig.Sound = StopAllSound();
 	}
 
 	RegCloseKey(hRegistryKey);
@@ -212,30 +213,30 @@ void InitMetricsAndFirstGame() {
 	}
 
 	// Load Items From .ini File
-	Height_InitFile = GetIntegerFromInitFile(Height, 9, 9, 25);
-	Width_InitFile = GetIntegerFromInitFile(Width, 9, 9, 30);
-	Difficulty_InitFile = GetIntegerFromInitFile(Difficulty, 0, 0, 3);
-	Mines_InitFile = GetIntegerFromInitFile(Mines, 10, 10, 999);
-	Xpos_InitFile = GetIntegerFromInitFile(Xpos, 80, 0, 1024);
-	Ypos_InitFile = GetIntegerFromInitFile(Ypos, 80, 0, 1024);
-	Sound_InitFile = GetIntegerFromInitFile(Sound, 0, 0, 3);
-	Mark_InitFile = GetIntegerFromInitFile(Mark, 1, 0, 1);
+	GameConfig.Height = GetIntegerFromInitFile(Height, 9, 9, 25);
+	GameConfig.Width = GetIntegerFromInitFile(Width, 9, 9, 30);
+	GameConfig.Difficulty = GetIntegerFromInitFile(Difficulty, 0, 0, 3);
+	GameConfig.Mines = GetIntegerFromInitFile(Mines, 10, 10, 999);
+	GameConfig.Xpos = GetIntegerFromInitFile(Xpos, 80, 0, 1024);
+	GameConfig.Ypos = GetIntegerFromInitFile(Ypos, 80, 0, 1024);
+	GameConfig.Sound = GetIntegerFromInitFile(Sound, 0, 0, 3);
+	GameConfig.Mark = GetIntegerFromInitFile(Mark, 1, 0, 1);
 	Tick_InitFile = GetIntegerFromInitFile(Tick, 0, 0, 1);
 	Menu_InitFile = GetIntegerFromInitFile(Menu, 0, 0, 2);
-	Time_InitFile[TIME_BEGINNER] = GetIntegerFromInitFile(Time1, 999, 0, 999);
-	Time_InitFile[TIME_INTERMIDIATE] = GetIntegerFromInitFile(Time2, 999, 0, 999);
-	Time_InitFile[TIME_EXPERT] = GetIntegerFromInitFile(Time3, 999, 0, 999);
+	GameConfig.Times[TIME_BEGINNER] = GetIntegerFromInitFile(Time1, 999, 0, 999);
+	GameConfig.Times[TIME_INTERMIDIATE] = GetIntegerFromInitFile(Time2, 999, 0, 999);
+	GameConfig.Times[TIME_EXPERT] = GetIntegerFromInitFile(Time3, 999, 0, 999);
 
-	GetStringFromInitFile(Name1, Name1_InitFile);
-	GetStringFromInitFile(Name2, Name2_InitFile);
-	GetStringFromInitFile(BestExpertName, Name3_InitFile);
+	GetStringFromInitFile(Name1, GameConfig.Names[0]);
+	GetStringFromInitFile(Name2, GameConfig.Names[1]);
+	GetStringFromInitFile(BestExpertName, GameConfig.Names[2]);
 
 	HDC hDC = GetDC(GetDesktopWindow());
 	int desktopColors = GetDeviceCaps(hDC, NUMCOLORS);
-	Color_InitFile = GetIntegerFromInitFile(Color, (desktopColors == 2) ? FALSE : TRUE, 0, 1);
+	GameConfig.Color = GetIntegerFromInitFile(Color, (desktopColors == 2) ? FALSE : TRUE, 0, 1);
 	ReleaseDC(GetDesktopWindow(), hDC);
 
-	if (Sound_InitFile == 3) {
-		Sound_InitFile = StopAllSound();
+	if (GameConfig.Sound == 3) {
+		GameConfig.Sound = StopAllSound();
 	}
 }

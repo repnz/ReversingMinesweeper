@@ -184,15 +184,15 @@ BOOL HandleLeftClick(DWORD dwLocation) {
 
 void InitializeCheckedMenuItems() {
 	// Set Difficulty Level Checkbox
-	SetMenuItemState(ID_MENUITEM_BEGINNER, Difficulty_InitFile == DIFFICULTY_BEGINNER);
-	SetMenuItemState(ID_MENUITEM_INTERMEDIATE, Difficulty_InitFile == DIFFICULTY_INTERMEDIATE);
-	SetMenuItemState(ID_MENUITEM_EXPERT, Difficulty_InitFile == DIFFICULTY_EXPERT);
-	SetMenuItemState(ID_MENUITEM_CUSTOM, Difficulty_InitFile == DIFFICULTY_CUSTOM);
+	SetMenuItemState(ID_MENUITEM_BEGINNER, GameConfig.Difficulty == DIFFICULTY_BEGINNER);
+	SetMenuItemState(ID_MENUITEM_INTERMEDIATE, GameConfig.Difficulty == DIFFICULTY_INTERMEDIATE);
+	SetMenuItemState(ID_MENUITEM_EXPERT, GameConfig.Difficulty == DIFFICULTY_EXPERT);
+	SetMenuItemState(ID_MENUITEM_CUSTOM, GameConfig.Difficulty == DIFFICULTY_CUSTOM);
 
 	// Set Another Flags
-	SetMenuItemState(ID_MENUITEM_COLOR, Color_InitFile);
-	SetMenuItemState(ID_MENUITEM_MARKS, Mark_InitFile);
-	SetMenuItemState(ID_MENUITEM_SOUND, Sound_InitFile);
+	SetMenuItemState(ID_MENUITEM_COLOR, GameConfig.Color);
+	SetMenuItemState(ID_MENUITEM_MARKS, GameConfig.Mark);
+	SetMenuItemState(ID_MENUITEM_SOUND, GameConfig.Sound);
 }
 
 INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -210,9 +210,9 @@ INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 	}
 	case WM_INITDIALOG:
 	{
-		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, Height_InitFile, FALSE);
-		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, Width_InitFile, FALSE);
-		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, Mines_InitFile, FALSE);
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, GameConfig.Height, FALSE);
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, GameConfig.Width, FALSE);
+		SetDlgItemInt(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, GameConfig.Mines, FALSE);
 		return TRUE;
 	}
 	case WM_COMMAND:
@@ -221,10 +221,10 @@ INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPAR
 		case 1:
 		case 100:
 		{
-			Height_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, 9, 24);
-			Width_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, 9, 30);
-			int maxMines = min((Height_InitFile - 1) * (Width_InitFile - 1), 999);
-			Mines_InitFile = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, 10, maxMines);
+			GameConfig.Height = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_HEIGHT, 9, 24);
+			GameConfig.Width = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_WIDTH, 9, 30);
+			int maxMines = min((GameConfig.Height - 1) * (GameConfig.Width - 1), 999);
+			GameConfig.Mines = GetDlgIntOfRange(hDlg, ID_DIALOG_CUSTOM_FIELD_MINES, 10, maxMines);
 		}
 		break;
 		case 2:
@@ -253,7 +253,7 @@ INT_PTR CALLBACK SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, WPARAM wParam
 
 	if (uMsg == WM_INITDIALOG) {
 		// Load you have the fastest time message
-		LoadResourceString(Difficulty_InitFile + 9, winMsg, _countof(winMsg));
+		LoadResourceString(GameConfig.Difficulty + 9, winMsg, _countof(winMsg));
 
 		// Show the message on the 
 		SetDlgItemTextW(hDialog, ID_DIALOG_SAVE_NAME_CONTROL_MSG, winMsg);
@@ -263,15 +263,15 @@ INT_PTR CALLBACK SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, WPARAM wParam
 
 		PWSTR pWinnerNamePtr = NULL;
 
-		switch (Difficulty_InitFile) {
+		switch (GameConfig.Difficulty) {
 		case DIFFICULTY_BEGINNER:
-			pWinnerNamePtr = Name1_InitFile;
+			pWinnerNamePtr = GameConfig.Names[0];
 			break;
 		case DIFFICULTY_INTERMEDIATE:
-			pWinnerNamePtr = Name2_InitFile;
+			pWinnerNamePtr = GameConfig.Names[1];
 			break;
 		default:
-			pWinnerNamePtr = Name3_InitFile;
+			pWinnerNamePtr = GameConfig.Names[2];
 			break;
 		}
 
@@ -284,15 +284,15 @@ INT_PTR CALLBACK SaveWinnerNameDialogProc(HWND hDialog, UINT uMsg, WPARAM wParam
 
 		PWSTR pWinnerNamePtr = NULL;
 
-		switch (Difficulty_InitFile) {
+		switch (GameConfig.Difficulty) {
 		case DIFFICULTY_BEGINNER:
-			pWinnerNamePtr = Name1_InitFile;
+			pWinnerNamePtr = GameConfig.Names[0];
 			break;
 		case DIFFICULTY_INTERMEDIATE:
-			pWinnerNamePtr = Name2_InitFile;
+			pWinnerNamePtr = GameConfig.Names[1];
 			break;
 		default:
-			pWinnerNamePtr = Name3_InitFile;
+			pWinnerNamePtr = GameConfig.Names[2];
 			break;
 		}
 
@@ -335,13 +335,13 @@ INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 		}
 
 		if (msg == ID_DIALOG_WINNERS_BTN_RESET_SCORES) {
-			Time_InitFile[0] = 999;
-			Time_InitFile[1] = 999;
-			Time_InitFile[2] = 999;
+			GameConfig.Times[0] = 999;
+			GameConfig.Times[1] = 999;
+			GameConfig.Times[2] = 999;
 
-			lstrcpyW(Name1_InitFile, AnonymousStr);
-			lstrcpyW(Name2_InitFile, AnonymousStr);
-			lstrcpyW(Name3_InitFile, AnonymousStr);
+			lstrcpyW(GameConfig.Names[0], AnonymousStr);
+			lstrcpyW(GameConfig.Names[1], AnonymousStr);
+			lstrcpyW(GameConfig.Names[2], AnonymousStr);
 
 			NeedToSaveConfigToRegistry = TRUE;
 		}
@@ -351,9 +351,9 @@ INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 	}
 
 
-	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_BEGINNER, Time_InitFile[0], Name1_InitFile);
-	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_INTERMIDIATE, Time_InitFile[1], Name2_InitFile);
-	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_EXPERT, Time_InitFile[2], Name3_InitFile);
+	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_BEGINNER, GameConfig.Times[0], GameConfig.Names[0]);
+	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_INTERMIDIATE, GameConfig.Times[1], GameConfig.Names[1]);
+	ShowWinnerNameAndTime(hDlg, ID_DIALOG_WINNERS_TIME_EXPERT, GameConfig.Times[2], GameConfig.Names[2]);
 	return TRUE;
 }
 
@@ -398,8 +398,8 @@ void InitializeWindowBorder(DWORD flags) {
 		}
 	}
 
-	xRight = (Width_InitFile2 * 16) + 24;   // 24 is the size of pixels in the side of the window, 16 is the size of block
-	yBottom = (Height_InitFile2 * 16) + 67; // 16 is the size of the pixels in a block, 67 is the size of pixels in the sides
+	xRight = (Width * 16) + 24;   // 24 is the size of pixels in the side of the window, 16 is the size of block
+	yBottom = (Height * 16) + 67; // 16 is the size of the pixels in a block, 67 is the size of pixels in the sides
 
 											// Check If The Place On The Screen Overflows The End Of The Screen
 											// If it is, Move The Window To A New Place
@@ -407,18 +407,18 @@ void InitializeWindowBorder(DWORD flags) {
 
 	// If diffFromEnd is negative, it means the window does not overflow the screen
 	// If diffFromEnd is positive, it means the window overflows the screen and needs to be moved
-	diffFromEnd = (xRight + Xpos_InitFile) - SimpleGetSystemMetrics(GET_SCREEN_WIDTH);
+	diffFromEnd = (xRight + GameConfig.Xpos) - SimpleGetSystemMetrics(GET_SCREEN_WIDTH);
 
 	if (diffFromEnd > 0) {
 		flags |= MOVE_WINDOW;
-		Xpos_InitFile -= diffFromEnd;
+		GameConfig.Xpos -= diffFromEnd;
 	}
 
-	diffFromEnd = (yBottom + Ypos_InitFile) - SimpleGetSystemMetrics(GET_SCREEN_HEIGHT);
+	diffFromEnd = (yBottom + GameConfig.Ypos) - SimpleGetSystemMetrics(GET_SCREEN_HEIGHT);
 
 	if (diffFromEnd > 0) {
 		flags |= MOVE_WINDOW;
-		Ypos_InitFile -= diffFromEnd;
+		GameConfig.Ypos -= diffFromEnd;
 	}
 
 	if (Minimized) {
@@ -427,7 +427,7 @@ void InitializeWindowBorder(DWORD flags) {
 
 	if (flags & MOVE_WINDOW) {
 		MoveWindow(hWnd,
-			Xpos_InitFile, Ypos_InitFile,
+			GameConfig.Xpos, GameConfig.Ypos,
 			WindowWidthInPixels + xRight,
 			yBottom + WindowHeightIncludingMenu,
 			TRUE);
@@ -440,7 +440,7 @@ void InitializeWindowBorder(DWORD flags) {
 		rcGameMenu.top == rcHelpMenu.top) {
 		WindowHeightIncludingMenu -= MenuBarHeightInPixels;
 
-		MoveWindow(hWnd, Xpos_InitFile, Ypos_InitFile, WindowWidthInPixels + xRight, yBottom + WindowHeightIncludingMenu, TRUE);
+		MoveWindow(hWnd, GameConfig.Xpos, GameConfig.Ypos, WindowWidthInPixels + xRight, yBottom + WindowHeightIncludingMenu, TRUE);
 	}
 
 	if (flags & REPAINT_WINDOW) {
@@ -595,8 +595,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 	case WM_WINDOWPOSCHANGED:
 		if ((StateFlags & STATE_WINDOW_MINIMIZED_2) == 0) {
 			WINDOWPOS* pos = (WINDOWPOS*)lParam;
-			Xpos_InitFile = pos->x;
-			Ypos_InitFile = pos->y;
+			GameConfig.Xpos = pos->x;
+			GameConfig.Ypos = pos->y;
 		}
 		break;
 	case WM_PAINT:
@@ -619,11 +619,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 __inline BOOL MenuHandler(WORD menuItem) {
 
 	if (menuItem >= ID_MENUITEM_BEGINNER && menuItem <= ID_MENUITEM_EXPERT) {
-		Difficulty_InitFile = LOWORD(menuItem - ID_MENUITEM_BEGINNER);
+		GameConfig.Difficulty = LOWORD(menuItem - ID_MENUITEM_BEGINNER);
 
-		Mines_InitFile = DifficultyConfigTable[Difficulty_InitFile].Mines;
-		Height_InitFile = DifficultyConfigTable[Difficulty_InitFile].Height;
-		Width_InitFile = DifficultyConfigTable[Difficulty_InitFile].Width;
+		GameConfig.Mines = DifficultyConfigTable[GameConfig.Difficulty].Mines;
+		GameConfig.Height = DifficultyConfigTable[GameConfig.Difficulty].Height;
+		GameConfig.Width = DifficultyConfigTable[GameConfig.Difficulty].Width;
 		InitializeNewGame();
 		NeedToSaveConfigToRegistry = TRUE;
 		InitializeMenu(Menu_InitFile);
@@ -633,7 +633,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
 	switch (menuItem) {
 	case ID_MENUITEM_COLOR:
 		// Toogle Color
-		Color_InitFile = !Color_InitFile;
+		GameConfig.Color = !GameConfig.Color;
 		FreePenAndBlocks();
 
 		if (LoadBitmaps()) {
@@ -672,18 +672,18 @@ __inline BOOL MenuHandler(WORD menuItem) {
 		ShowHelpHtml(3, 0);
 		break;
 	case ID_MENUITEM_MARKS:
-		Mark_InitFile = (Mark_InitFile) ? FALSE : TRUE;
+		GameConfig.Mark = (GameConfig.Mark) ? FALSE : TRUE;
 		NeedToSaveConfigToRegistry = TRUE;
 		InitializeMenu(Menu_InitFile);
 		break;
 	case ID_MENUITEM_SOUND:
 
-		if (Sound_InitFile) {
+		if (GameConfig.Sound) {
 			FreeSound();
-			Sound_InitFile = 0;
+			GameConfig.Sound = 0;
 		}
 		else {
-			Sound_InitFile = StopAllSound();
+			GameConfig.Sound = StopAllSound();
 		}
 		NeedToSaveConfigToRegistry = TRUE;
 		InitializeMenu(Menu_InitFile);
@@ -709,13 +709,13 @@ __inline void KeyDownHandler(WPARAM wParam) {
 		}
 		break;
 	case VK_F4:
-		if (Sound_InitFile > 1) {
-			if (Sound_InitFile == 3) {
+		if (GameConfig.Sound > 1) {
+			if (GameConfig.Sound == 3) {
 				FreeSound();
-				Sound_InitFile = 2;
+				GameConfig.Sound = 2;
 			}
 			else {
-				Sound_InitFile = StopAllSound();
+				GameConfig.Sound = StopAllSound();
 			}
 		}
 		break;
@@ -837,8 +837,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		ClassName,
 		ClassName,
 		WS_MINIMIZEBOX | WS_SYSMENU | WS_DLGFRAME | WS_BORDER,
-		Xpos_InitFile - WindowWidthInPixels,
-		Ypos_InitFile - WindowHeightIncludingMenu,
+		GameConfig.Xpos - WindowWidthInPixels,
+		GameConfig.Ypos - WindowHeightIncludingMenu,
 		xRight + WindowWidthInPixels,
 		yBottom + WindowHeightIncludingMenu,
 		NULL,
@@ -886,7 +886,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 void CustomFieldDialogBox() {
 	DialogBoxParamW(hModule, (LPCWSTR)ID_DIALOG_CUSTOM_FIELD, hWnd, CustomFieldDialogProc, 0);
-	Difficulty_InitFile = 3;
+	GameConfig.Difficulty = 3;
 	// WIERD: Unconditionally change the difficulty to 3...
 	InitializeCheckedMenuItems();
 	NeedToSaveConfigToRegistry = TRUE;
