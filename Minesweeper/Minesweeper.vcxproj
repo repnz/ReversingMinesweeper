@@ -124,14 +124,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="drawing.cpp" />
-    <ClCompile Include="game.cpp" />
+    <ClCompile Include="drawing.c" />
+    <ClCompile Include="game.c" />
     <ClCompile Include="help.c" />
-    <ClCompile Include="main.c" />
-    <ClCompile Include="config.cpp" />
-    <ClCompile Include="sound.cpp" />
-    <ClCompile Include="utils.cpp" />
-    <ClCompile Include="windowing.cpp" />
+    <ClCompile Include="config.c" />
+    <ClCompile Include="sound.c" />
+    <ClCompile Include="utils.c" />
+    <ClCompile Include="windowing.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="drawing.h" />

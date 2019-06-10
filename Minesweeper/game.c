@@ -1,4 +1,4 @@
-
+#include "game.h"
 
 // Windowing Functions Variables
 // 1 -> New Game: Set on InitializeNewGame. 

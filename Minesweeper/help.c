@@ -1,5 +1,7 @@
 #include "help.h"
 
+#define HtmlHelpW_ExportOrdinal 0x0E
+
 
 // Help Module
 HMODULE HtmlHelpModuleHandle = NULL;
@@ -9,7 +11,8 @@ typedef HWND(*HTMLHELPWPROC)(
 	HWND hwndCaller,
 	LPCWSTR pszFile,
 	UINT uCommand,
-	DWORD_PTR dwData);
+	DWORD_PTR dwData
+);
 
 
 

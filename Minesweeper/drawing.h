@@ -1,6 +1,12 @@
 #pragma once
 #include <Windows.h>
 
+#define SMILE_NORMAL 0
+#define SMILE_WOW    1
+#define SMILE_LOST   2
+#define SMILE_WINNER 3
+#define SMILE_CLICKED 4
+
 // Bitmap Drawing Functions
 HRSRC FindBitmapResource(USHORT resourceId);
 int GetBitmapByteLength(int a, int b);

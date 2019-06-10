@@ -1,5 +1,21 @@
 #include <Windows.h>
 
+#define POINT_BIG_NUM_X 17
+#define POINT_MID_NUM_X 30
+#define POINT_LOW_NUM_X 43
+
+#define NUMBER_WIDTH 13
+#define NUMBER_HEIGHT 23
+#define NUMBER_Y 16
+
+#define BLOCK_WIDTH 16
+#define BLOCK_HEIGHT 16
+
+#define SMILE_BITMAP_WIDTH 24
+#define SMILE_BITMAP_HEIGHT 24
+
+#define NUM_MINUS 11
+
 HPEN hPen;
 
 // Resource Handles

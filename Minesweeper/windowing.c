@@ -1,14 +1,59 @@
 #include "windowing.h"
+#include "game.h"
+#include "resource.h"
+#include "config.h"
 
-WCHAR CheatPassword[] = L"XYZZY";
+static WCHAR CheatPassword[] = L"XYZZY";
 
-DifficultyConfigItem DifficultyConfigTable[] = {
+typedef struct {
+	DWORD Mines;
+	DWORD Height;
+	DWORD Width;
+} DifficultyConfigItem;
+
+
+#define BEGINNER_MINES 10
+#define BEGINEER_HEIGHT 9
+#define BEGINNER_WIDTH 9
+
+#define INTERMIDIATE_MINES 40
+#define INTERMIDIATE_HEIGHT 16
+#define INTERMIDIATE_WIDTH 16
+
+#define EXPERT_MINES 99
+#define EXPERT_HEIGHT 16
+#define EXPERT_WIDTH 30
+
+
+#define DIFFICULTY_BEGINNER 0
+#define DIFFICULTY_INTERMEDIATE 1
+#define DIFFICULTY_EXPERT 2
+#define DIFFICULTY_CUSTOM 3
+
+#define BLACK_COLOR 0
+#define WHITE_COLOR 0x00FFFFFF
+
+#define TIMER_ID 1
+
+#define GAME_MENU_INDEX 0
+#define HELP_MENU_INDEX 1
+
+#define MOVE_WINDOW 2
+#define REPAINT_WINDOW 4
+
+
+static DifficultyConfigItem DifficultyConfigTable[] = {
 	{ BEGINNER_MINES, BEGINEER_HEIGHT, BEGINNER_WIDTH },
 	{ INTERMIDIATE_MINES, INTERMIDIATE_HEIGHT, INTERMIDIATE_WIDTH },
 	{ EXPERT_MINES, EXPERT_HEIGHT, EXPERT_WIDTH }
 };
 
-HelpEntry customFieldHelpData[] = {
+typedef struct {
+	DWORD ControlIdentifier;
+	DWORD ContextIdentifier;
+} HelpEntry;
+
+static HelpEntry customFieldHelpData[] = {
 	{ ID_DIALOG_CUSTOM_FIELD_HEIGHT, 1000 },
 	{ ID_DIALOG_CUSTOM_FIELD_WIDTH, 1001 },
 	{ ID_DIALOG_CUSTOM_FIELD_MINES, 1002 },
@@ -18,7 +63,7 @@ HelpEntry customFieldHelpData[] = {
 	{ 0, 0 }
 };
 
-HelpEntry winnersHelpData[] = {
+static HelpEntry winnersHelpData[] = {
 	{ ID_DIALOG_WINNERS_BTN_RESET_SCORES, 1003 },
 	{ 709, 1004 },
 	{ 710, 1004 },
@@ -324,6 +369,9 @@ void WinnersDialogBox() {
 		hWnd, WinnersDialogProc, (LPARAM)NULL);
 }
 
+
+#define GET_SCREEN_WIDTH 0
+#define GET_SCREEN_HEIGHT 1
 
 void InitializeWindowBorder(DWORD flags) {
 	BOOL differentCordsForMenus = FALSE;
