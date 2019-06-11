@@ -33,8 +33,8 @@
 #define BLOCK_IS_STATE(Block, State) ((Block & BLOCK_STATE_MASK) == State)
 
 typedef struct {
-	DWORD Column;
-	DWORD Row;
+    DWORD Column;
+    DWORD Row;
 } BoardPoint;
 
 
