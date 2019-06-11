@@ -75,7 +75,7 @@ static HelpEntry winnersHelpData[] = {
     { 706, 1004 }
 };
 
-DWORD CheatPasswordIndex;
+int CheatPasswordIndex;
 
 BOOL HasMouseCapture;
 BOOL Is3x3Click;
@@ -323,7 +323,7 @@ INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
         break;
     case WM_COMMAND:
     {
-        DWORD msg = LOWORD(wParam);
+        int msg = LOWORD(wParam);
 
         if (msg <= 0) {
             return FALSE;
@@ -384,7 +384,7 @@ void InitializeWindowBorder(DWORD flags) {
 
     WindowHeightIncludingMenu = ScreenHeightInPixels;
 
-    if (Menu_InitFile & 1) {
+    if (GameConfig.Menu & 1) {
         WindowHeightIncludingMenu += MenuBarHeightInPixels;
 
 
@@ -529,7 +529,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
             HandleRightClick((BoardPoint) {
                 .Column = (LOWORD(lParam) + 4) / 16,
-                    .Row = (HIWORD(lParam) - 39) / 16
+                .Row = (HIWORD(lParam) - 39) / 16
             });
         }
 
@@ -626,7 +626,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
         GameConfig.Width = DifficultyConfigTable[GameConfig.Difficulty].Width;
         InitializeNewGame();
         NeedToSaveConfigToRegistry = TRUE;
-        InitializeMenu(Menu_InitFile);
+        InitializeMenu(GameConfig.Menu);
         return TRUE;
     }
 
@@ -639,7 +639,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
         if (LoadBitmaps()) {
             RedrawUI();
             NeedToSaveConfigToRegistry = TRUE;
-            InitializeMenu(Menu_InitFile);
+            InitializeMenu(GameConfig.Menu);
         }
         else {
             DisplayErrorMessage(ID_OUT_OF_MEM);
@@ -674,7 +674,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
     case ID_MENUITEM_MARKS:
         GameConfig.Mark = (GameConfig.Mark) ? FALSE : TRUE;
         NeedToSaveConfigToRegistry = TRUE;
-        InitializeMenu(Menu_InitFile);
+        InitializeMenu(GameConfig.Menu);
         break;
     case ID_MENUITEM_SOUND:
 
@@ -686,7 +686,7 @@ __inline BOOL MenuHandler(WORD menuItem) {
             GameConfig.Sound = StopAllSound();
         }
         NeedToSaveConfigToRegistry = TRUE;
-        InitializeMenu(Menu_InitFile);
+        InitializeMenu(GameConfig.Menu);
         break;
     case ID_MENUITEM_EXIT:
         ShowWindow(hWnd, FALSE);
@@ -720,12 +720,12 @@ __inline void KeyDownHandler(WPARAM wParam) {
         }
         break;
     case VK_F5:
-        if (Menu_InitFile) {
+        if (GameConfig.Menu) {
             InitializeMenu(1);
         }
         break;
     case VK_F6:
-        if (Menu_InitFile) {
+        if (GameConfig.Menu) {
             InitializeMenu(2);
         }
         break;
@@ -782,7 +782,7 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         // Update Mouse Block
         UpdateClickedBlocksState((BoardPoint) {
             .Column = (LOWORD(lParam) + 4) / 16,
-                .Row = (HIWORD(lParam) - 39) / 16
+            .Row = (HIWORD(lParam) - 39) / 16
         });
     }
 
@@ -861,7 +861,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
 
-    InitializeMenu(Menu_InitFile);
+    InitializeMenu(GameConfig.Menu);
     InitializeNewGame();
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
@@ -893,9 +893,9 @@ void CustomFieldDialogBox() {
 }
 
 void InitializeMenu(DWORD menuFlags) {
-    Menu_InitFile = menuFlags;
+    GameConfig.Menu = menuFlags;
     InitializeCheckedMenuItems();
-    SetMenu(hWnd, (Menu_InitFile & 1) ? NULL : hMenu);
+    SetMenu(hWnd, (GameConfig.Menu & 1) ? NULL : hMenu);
     InitializeWindowBorder(MOVE_WINDOW);
 }
 

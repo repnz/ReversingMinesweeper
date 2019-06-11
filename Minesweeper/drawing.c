@@ -297,10 +297,10 @@ void DisplayAllBlocks() {
 void DisplayAllBlocksInDC(HDC hDC) {
     int y = 55;
 
-    for (DWORD loop_row = 1; loop_row <= Height; ++loop_row) {
+    for (int loop_row = 1; loop_row <= Height; ++loop_row) {
         int x = 12;
 
-        for (DWORD loop_column = 1; loop_column <= Width; loop_column++) {
+        for (int loop_column = 1; loop_column <= Width; loop_column++) {
             // Get the current state of the block
             BYTE blockValue = BlockArray[loop_row][loop_column];
             HDC blockState = BlockStates[blockValue & BLOCK_STATE_MASK];
@@ -389,11 +389,11 @@ void SetROPWrapper(HDC hDC, BYTE white_or_copypen) {
 /*
 If white_or_copypen is 1, the lower-right side is not drawn
 */
-void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copypen) {
+void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, char white_or_copypen) {
 
     SetROPWrapper(hDC, white_or_copypen);
 
-    for (DWORD i = 0; i < lines_width; i++) {
+    for (int i = 0; i < lines_width; i++) {
         rect.bottom--;
         MoveToEx(hDC, rect.left, rect.bottom, NULL);
 
@@ -411,7 +411,7 @@ void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copyp
         SetROPWrapper(hDC, white_or_copypen ^ 1);
     }
 
-    for (DWORD i = 0; i < lines_width; i++) {
+    for (int i = 0; i < lines_width; i++) {
         rect.bottom++;
         MoveToEx(hDC, rect.left, rect.bottom, NULL);
         rect.left--;

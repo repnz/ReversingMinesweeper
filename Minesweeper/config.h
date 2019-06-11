@@ -64,6 +64,6 @@ void SetIntegerInRegistry(ConfigItem regValue, DWORD value);
 void SetStringInRegistry(ConfigItem regValue, LPCWSTR lpStringValue);
 void SaveConfigToRegistry();
 
-int GetIntegerFromInitFile(ConfigItem regValue, int nDefault, DWORD minValue, DWORD maxValue);
+int GetIntegerFromInitFile(ConfigItem regValue, int nDefault, int minValue, int maxValue);
 int GetStringFromInitFile(ConfigItem regValue, LPWSTR lpReturnedString);
 void InitMetricsAndFirstGame();

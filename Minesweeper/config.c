@@ -112,8 +112,8 @@ void InitializeConfigFromRegistry() {
     GameConfig.Ypos = GetIntegerFromRegistry(Ypos, 80, 0, 1024);
     GameConfig.Sound = GetIntegerFromRegistry(Sound, 0, 0, 3);
     GameConfig.Mark = GetIntegerFromRegistry(Mark, 1, 0, 1);
-    Tick_InitFile = GetIntegerFromRegistry(Tick, 0, 0, 1);
-    Menu_InitFile = GetIntegerFromRegistry(Menu, 0, 0, 2);
+    GameConfig.Tick = GetIntegerFromRegistry(Tick, 0, 0, 1);
+    GameConfig.Menu = GetIntegerFromRegistry(Menu, 0, 0, 2);
     GameConfig.Times[TIME_BEGINNER] = GetIntegerFromRegistry(Time1, 999, 0, 999);
     GameConfig.Times[TIME_INTERMIDIATE] = GetIntegerFromRegistry(Time2, 999, 0, 999);
     GameConfig.Times[TIME_EXPERT] = GetIntegerFromRegistry(Time3, 999, 0, 999);
@@ -162,7 +162,7 @@ int GetIntegerFromRegistry(ConfigItem regValue, int defaultValue, int minValue, 
 // In the assembly code there are many calls to GetPrivateProfileIntW(). 
 // It is because it is called inside a macro argument.
 // Moreover, the "min" logic is calculated twice, again because it's called inside a macro argument.
-int GetIntegerFromInitFile(ConfigItem regValue, int nDefault, DWORD minValue, DWORD maxValue) {
+int GetIntegerFromInitFile(ConfigItem regValue, int nDefault, int minValue, int maxValue) {
 
     LPCWSTR lpKeyName = RegistryValuesNames[(DWORD)regValue];
 
