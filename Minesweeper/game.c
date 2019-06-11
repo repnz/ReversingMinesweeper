@@ -594,7 +594,7 @@ void ExpandEmptyBlock(BoardPoint point) {
         DWORD row = RowsList[i];
         DWORD column = ColumnsList[i];
 
-        ShowBlockValue((BoardPoint) { point.Column - 1, point.Row - 1 });
+        ShowBlockValue((BoardPoint) { column - 1, row - 1 });
         ShowBlockValue((BoardPoint) { column, row - 1 });
         ShowBlockValue((BoardPoint) { column + 1, row - 1 });
 

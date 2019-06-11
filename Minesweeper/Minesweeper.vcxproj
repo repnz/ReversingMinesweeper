@@ -142,9 +142,6 @@
     <ClInclude Include="utils.h" />
     <ClInclude Include="windowing.h" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="LAYOUT.md" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

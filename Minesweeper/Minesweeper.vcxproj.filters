@@ -63,7 +63,4 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="LAYOUT.md" />
-  </ItemGroup>
 </Project>
