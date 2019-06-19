@@ -1,15 +1,16 @@
 #pragma once
 #include <Windows.h>
 
+// Variables
+//
+extern int GlobalSmileId;
 
+
+// Enum Data
+//
 // Block Data:
 // 8 bits:
-// [ 8 7 6_5 4 3 2 1 ] 
-// 1-4: The first 4 bits specifies the state of the block
-// The next bit is unknown.. 
-// 0x60: 
-// 0x40: 7: Is Revealed?
-// 0x80: 8: Is Bomb?
+// [ [is_bomb: 8] [revealed: 7] [unused: 6] [state: 5 4 3 2 1] ] 
 #define BLOCK_STATE_BORDER_VALUE 0x10
 #define BLOCK_STATE_EMPTY_UNCLICKED 0xF
 #define BLOCK_STATE_FLAG 0xE
@@ -27,9 +28,12 @@
 #define BLOCK_STATE_NUMBER_2 2
 #define BLOCK_STATE_NUMBER_1 1
 #define BLOCK_STATE_READ_EMPTY 0
+#define BLOCK_STATE_MASK 0x1F
+
 #define BLOCK_IS_REVEALED 0x40
 #define BLOCK_IS_BOMB 0x80
-#define BLOCK_STATE_MASK 0x1f
+
+// Maybe the "Block" is declared as struct with bit fields..?
 #define BLOCK_IS_STATE(Block, State) ((Block & BLOCK_STATE_MASK) == State)
 
 typedef struct {

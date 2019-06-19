@@ -1,4 +1,8 @@
 #include "game.h"
+#include "windowing.h"
+#include "config.h"
+#include "sound.h"
+#include "drawing.h"
 
 // Windowing Functions Variables
 // 1 -> New Game: Set on InitializeNewGame. 
@@ -63,7 +67,7 @@ __inline void ReverseMemSet(PBYTE buffer, BYTE value, DWORD size) {
     do {
         size--;
         buffer[size] = value;
-    } while (size != 0)
+    } while (size != 0);
 }
 
 void InitializeBlockArrayBorders() {
@@ -88,13 +92,13 @@ void InitializeBlockArrayBorders() {
 }
 
 void InitializeNewGame() {
-    DWORD flags;
+    DWORD borderFlags;
 
     if (GameConfig.Width == Width && GameConfig.Height == Height) {
-        flags = REPAINT_WINDOW;
+        borderFlags = WINDOW_BORDER_REPAINT_WINDOW;
     }
     else {
-        flags = MOVE_WINDOW | REPAINT_WINDOW;
+        borderFlags = WINDOW_BORDER_MOVE_WINDOW | WINDOW_BORDER_REPAINT_WINDOW;
     }
 
     Width = GameConfig.Width;
@@ -122,7 +126,7 @@ void InitializeNewGame() {
         // SET A MINE
         ACCESS_BLOCK(randomPoint) |= BLOCK_IS_BOMB;
         Mines_Copy--;
-    } while (Mines_Copy)
+    } while (Mines_Copy);
 
     TimerSeconds = 0;
     Mines_Copy = GameConfig.Mines;
@@ -131,7 +135,7 @@ void InitializeNewGame() {
     NumberOfEmptyBlocks = (Height * Width) - GameConfig.Mines;
     StateFlags = STATE_GAME_IS_ON;
     AddAndDisplayLeftFlags(0); // Should have called DisplayLeftFlags()!
-    InitializeWindowBorder(flags);
+    InitializeWindowBorder(borderFlags);
 }
 
 void RevealAllBombs(BYTE revealedBombsState) {
@@ -248,7 +252,6 @@ __inline VOID UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldCli
         }
     }
 
-    // Draw new blocks
     if (isNewLocationInBounds) {
         for (int loop_row = topRow; loop_row <= bottomRow; ++loop_row) {
             for (int loop_column = leftColumn; loop_column <= rightColumn; ++loop_column) {
@@ -318,7 +321,7 @@ void FinishGame(BOOL isWon) {
     GlobalSmileId = (isWon) ? SMILE_WINNER : SMILE_LOST;
     DisplaySmile(GlobalSmileId);
 
-    // If the player wins, bombs are changed into flags
+    // If the player wins, bombs are changed into borderFlags
     // If the player loses, bombs change into black bombs
     RevealAllBombs((isWon) ? BLOCK_STATE_FLAG : BLOCK_STATE_BLACK_BOMB);
 

@@ -56,6 +56,7 @@ typedef struct {
 } Config;
 
 extern Config GameConfig;
+extern BOOL NeedToSaveConfigToRegistry;
 
 int GetIntegerFromRegistry(ConfigItem regValue, int defaultValue, int minValue, int maxValue);
 VOID GetStringFromRegistry(ConfigItem id, LPWSTR lpData);

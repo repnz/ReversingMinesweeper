@@ -2,6 +2,21 @@
 #include <Windows.h>
 
 
+// Variables
+extern WCHAR ClassName[];
+extern BOOL Is3x3Click;
+extern BOOL HasMouseCapture;
+
+// Enum
+#define WINDOW_BORDER_MOVE_WINDOW 2
+#define WINDOW_BORDER_REPAINT_WINDOW 4
+
+#define DIFFICULTY_BEGINNER 0
+#define DIFFICULTY_INTERMEDIATE 1
+#define DIFFICULTY_EXPERT 2
+#define DIFFICULTY_CUSTOM 3
+
+// Functions
 BOOL HandleLeftClick(DWORD dwLocation);
 void InitializeCheckedMenuItems();
 INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);

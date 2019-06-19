@@ -1,6 +1,7 @@
 #include "windowing.h"
 #include "game.h"
 #include "resource.h"
+#include "drawing.h"
 #include "config.h"
 
 static WCHAR CheatPassword[] = L"XYZZY";
@@ -24,12 +25,6 @@ typedef struct {
 #define EXPERT_HEIGHT 16
 #define EXPERT_WIDTH 30
 
-
-#define DIFFICULTY_BEGINNER 0
-#define DIFFICULTY_INTERMEDIATE 1
-#define DIFFICULTY_EXPERT 2
-#define DIFFICULTY_CUSTOM 3
-
 #define BLACK_COLOR 0
 #define WHITE_COLOR 0x00FFFFFF
 
@@ -37,9 +32,6 @@ typedef struct {
 
 #define GAME_MENU_INDEX 0
 #define HELP_MENU_INDEX 1
-
-#define MOVE_WINDOW 2
-#define REPAINT_WINDOW 4
 
 
 static DifficultyConfigItem DifficultyConfigTable[] = {
@@ -373,7 +365,7 @@ void WinnersDialogBox() {
 #define GET_SCREEN_WIDTH 0
 #define GET_SCREEN_HEIGHT 1
 
-void InitializeWindowBorder(DWORD flags) {
+void InitializeWindowBorder(DWORD borderFlags) {
     BOOL differentCordsForMenus = FALSE;
     RECT rcGameMenu;
     RECT rcHelpMenu;
@@ -410,14 +402,14 @@ void InitializeWindowBorder(DWORD flags) {
     diffFromEnd = (xRight + GameConfig.Xpos) - SimpleGetSystemMetrics(GET_SCREEN_WIDTH);
 
     if (diffFromEnd > 0) {
-        flags |= MOVE_WINDOW;
+        borderFlags |= WINDOW_BORDER_MOVE_WINDOW;
         GameConfig.Xpos -= diffFromEnd;
     }
 
     diffFromEnd = (yBottom + GameConfig.Ypos) - SimpleGetSystemMetrics(GET_SCREEN_HEIGHT);
 
     if (diffFromEnd > 0) {
-        flags |= MOVE_WINDOW;
+        borderFlags |= WINDOW_BORDER_MOVE_WINDOW;
         GameConfig.Ypos -= diffFromEnd;
     }
 
@@ -425,7 +417,7 @@ void InitializeWindowBorder(DWORD flags) {
         return;
     }
 
-    if (flags & MOVE_WINDOW) {
+    if (borderFlags & WINDOW_BORDER_MOVE_WINDOW) {
         MoveWindow(hWnd,
             GameConfig.Xpos, GameConfig.Ypos,
             WindowWidthInPixels + xRight,
@@ -443,7 +435,7 @@ void InitializeWindowBorder(DWORD flags) {
         MoveWindow(hWnd, GameConfig.Xpos, GameConfig.Ypos, WindowWidthInPixels + xRight, yBottom + WindowHeightIncludingMenu, TRUE);
     }
 
-    if (flags & REPAINT_WINDOW) {
+    if (borderFlags & WINDOW_BORDER_REPAINT_WINDOW) {
         RECT rc;
         SetRect(&rc, 0, 0, xRight, yBottom);
         // Cause a Repaint of the whole window
@@ -570,7 +562,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         switch (GET_SC_WPARAM(wParam)) {
         case SC_MINIMIZE:
             NotifyMinimize();
-            // Maybe add minimize flags..
+            // Maybe add minimize borderFlags..
             StateFlags |= (STATE_WINDOW_MINIMIZED | STATE_WINDOW_MINIMIZED_2);
             break;
         case SC_RESTORE:
@@ -896,7 +888,7 @@ void InitializeMenu(DWORD menuFlags) {
     GameConfig.Menu = menuFlags;
     InitializeCheckedMenuItems();
     SetMenu(hWnd, (GameConfig.Menu & 1) ? NULL : hMenu);
-    InitializeWindowBorder(MOVE_WINDOW);
+    InitializeWindowBorder(WINDOW_BORDER_MOVE_WINDOW);
 }
 
 
