@@ -24,12 +24,16 @@
 #define TIME_INTERMIDIATE 1
 #define TIME_EXPERT 2
 
+#define NAME_BEGINNER 0
+#define NAME_INTERMIDIATE 1
+#define NAME_EXPERT 2
+
 typedef WCHAR NameString[32];
 
 
 // Those variables here are in the same order of the strings array
 // It's seems like they are represented as a struct
-typedef struct {
+typedef struct _Config {
     short Difficulty;
     int Mines;
 

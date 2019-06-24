@@ -173,7 +173,11 @@ int GetIntegerFromInitFile(DWORD regValue, int nDefault, int minValue, int maxVa
 
     LPCWSTR lpKeyName = RegistryValuesNames[regValue];
 
-    return max(min(maxValue, (int)GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName)), minValue);
+    // Don't do this in real code plz unless max and min are inlined functions
+    return max(
+        min(maxValue, (int)GetPrivateProfileIntW(ClassName, lpKeyName, nDefault, lpInitFileName)),
+        minValue
+    );
 }
 
 int GetStringFromInitFile(DWORD regValue, LPWSTR lpReturnedString) {
@@ -211,7 +215,7 @@ void InitMetricsAndFirstGame() {
     //
     // Check If The Player Already Played
     //
-    int alreadyPlayed = GetIntegerFromRegistry(CONFIG_ALREADY_PLAYED, 0, 0, 1);
+    BOOL alreadyPlayed = GetIntegerFromRegistry(CONFIG_ALREADY_PLAYED, 0, 0, 1);
 
     RegCloseKey(hRegistryKey);
 
@@ -234,9 +238,9 @@ void InitMetricsAndFirstGame() {
     GameConfig.Times[TIME_INTERMIDIATE] = GetIntegerFromInitFile(CONFIG_TIME2, 999, 0, 999);
     GameConfig.Times[TIME_EXPERT] = GetIntegerFromInitFile(CONFIG_TIME3, 999, 0, 999);
 
-    GetStringFromInitFile(CONFIG_NAME1, GameConfig.Names[0]);
-    GetStringFromInitFile(CONFIG_NAME2, GameConfig.Names[1]);
-    GetStringFromInitFile(CONFIG_NAME3, GameConfig.Names[2]);
+    GetStringFromInitFile(CONFIG_NAME1, GameConfig.Names[NAME_BEGINNER]);
+    GetStringFromInitFile(CONFIG_NAME2, GameConfig.Names[NAME_INTERMIDIATE]);
+    GetStringFromInitFile(CONFIG_NAME3, GameConfig.Names[NAME_EXPERT]);
 
     HDC hDC = GetDC(GetDesktopWindow());
     int desktopColors = GetDeviceCaps(hDC, NUMCOLORS);
