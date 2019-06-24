@@ -62,13 +62,6 @@ extern BOOL NeedToSaveConfigToRegistry;
 extern WCHAR SecondsLeftBuffer[];
 extern WCHAR AnonymousStr[];
 
-int GetIntegerFromRegistry(DWORD regValue, int defaultValue, int minValue, int maxValue);
-VOID GetStringFromRegistry(DWORD id, LPWSTR lpData);
 void InitializeConfigFromRegistry();
-void SetIntegerInRegistry(DWORD regValue, DWORD value);
-void SetStringInRegistry(DWORD regValue, LPCWSTR lpStringValue);
 void SaveConfigToRegistry();
-
-int GetIntegerFromInitFile(DWORD regValue, int nDefault, int minValue, int maxValue);
-int GetStringFromInitFile(DWORD regValue, LPWSTR lpReturnedString);
 void InitMetricsAndFirstGame();

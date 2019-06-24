@@ -42,6 +42,14 @@ PCWSTR RegistryKeyName = L"Software\\Microsoft\\winmine";
 WCHAR SecondsLeftBuffer[32];
 WCHAR AnonymousStr[32];
 
+// Private Functions
+int GetIntegerFromRegistry(DWORD regValue, int defaultValue, int minValue, int maxValue);
+VOID GetStringFromRegistry(DWORD id, LPWSTR lpData);
+void SetIntegerInRegistry(DWORD regValue, DWORD value);
+void SetStringInRegistry(DWORD regValue, LPCWSTR lpStringValue);
+int GetIntegerFromInitFile(DWORD regValue, int nDefault, int minValue, int maxValue);
+int GetStringFromInitFile(DWORD regValue, LPWSTR lpReturnedString);
+
 void SaveConfigToRegistry() {
     DWORD dwDisposition;
     RegCreateKeyExW(HKEY_CURRENT_USER, RegistryKeyName, 0, 0, 0, KEY_WRITE, 0, &hRegistryKey, &dwDisposition);
