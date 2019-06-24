@@ -1,4 +1,10 @@
 #include <Windows.h>
+#include "config.h"
+#include "windowing.h"
+#include "game.h"
+#include "resource.h"
+#include "drawing.h"
+#include "sound.h"
 
 #define POINT_BIG_NUM_X 17
 #define POINT_MID_NUM_X 30
@@ -389,7 +395,7 @@ void SetROPWrapper(HDC hDC, BYTE white_or_copypen) {
 /*
 If white_or_copypen is 1, the lower-right side is not drawn
 */
-void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, char white_or_copypen) {
+void DrawHUDRectangle(HDC hDC, RECT rect, int lines_width, char white_or_copypen) {
 
     SetROPWrapper(hDC, white_or_copypen);
 

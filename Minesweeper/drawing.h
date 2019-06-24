@@ -31,7 +31,7 @@ void DisplayTimerSeconds();
 void DisplaySmileOnDC(HDC hDC, DWORD smileId);
 void DisplaySmile(DWORD smileId);
 void SetROPWrapper(HDC hDC, BYTE white_or_copypen);
-void DrawHUDRectangle(HDC hDC, RECT rect, DWORD lines_width, BYTE white_or_copypen);
+void DrawHUDRectangle(HDC hDC, RECT rect, int lines_width, char white_or_copypen);
 void DrawHUDRectangles(HDC hDC);
 void RedrawUIOnDC(HDC hDC);
 void RedrawUI();

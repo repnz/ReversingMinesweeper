@@ -3,8 +3,13 @@
 #include "resource.h"
 #include "drawing.h"
 #include "config.h"
+#include "help.h"
+#include "sound.h"
+#include "utils.h"
+#include <CommCtrl.h>
 
 static WCHAR CheatPassword[] = L"XYZZY";
+#define WINMINE_HELP L"winmine.hlp"
 
 typedef struct {
     DWORD Mines;
@@ -27,8 +32,6 @@ typedef struct {
 
 #define BLACK_COLOR 0
 #define WHITE_COLOR 0x00FFFFFF
-
-#define TIMER_ID 1
 
 #define GAME_MENU_INDEX 0
 #define HELP_MENU_INDEX 1
@@ -187,17 +190,18 @@ void InitializeCheckedMenuItems() {
     SetMenuItemState(ID_MENUITEM_SOUND, GameConfig.Sound);
 }
 
+
 INT_PTR CALLBACK CustomFieldDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_HELP:
     {
         HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-        WinHelpW((HWND)pHelpInfo->hItemHandle, winmineHelp, HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
+        WinHelpW((HWND)pHelpInfo->hItemHandle, WINMINE_HELP, HELP_WM_HELP, (ULONG_PTR)&winnersHelpData);
         return FALSE;
     }
     case WM_CONTEXTMENU:
     {
-        WinHelpW((HWND)wParam, winmineHelp, HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
+        WinHelpW((HWND)wParam, WINMINE_HELP, HELP_CONTEXTMENU, (ULONG_PTR)&winnersHelpData);
         return FALSE;
     }
     case WM_INITDIALOG:
@@ -302,13 +306,13 @@ INT_PTR CALLBACK WinnersDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
     case WM_HELP:
     {
         HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-        WinHelpW((HWND)pHelpInfo->hItemHandle, winmineHelp, HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
+        WinHelpW((HWND)pHelpInfo->hItemHandle, WINMINE_HELP, HELP_WM_HELP, (ULONG_PTR)winnersHelpData);
         return FALSE;
     }
     case WM_CONTEXTMENU:
     {
         HELPINFO* pHelpInfo = (HELPINFO*)lParam;
-        WinHelpW((HWND)wParam, winmineHelp, HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
+        WinHelpW((HWND)wParam, WINMINE_HELP, HELP_CONTEXTMENU, (ULONG_PTR)winnersHelpData);
         return FALSE;
     }
     case WM_INITDIALOG:
@@ -393,8 +397,8 @@ void InitializeWindowBorder(DWORD borderFlags) {
     xRight = (Width * 16) + 24;   // 24 is the size of pixels in the side of the window, 16 is the size of block
     yBottom = (Height * 16) + 67; // 16 is the size of the pixels in a block, 67 is the size of pixels in the sides
 
-                                            // Check If The Place On The Screen Overflows The End Of The Screen
-                                            // If it is, Move The Window To A New Place
+    // Check If The Place On The Screen Overflows The End Of The Screen
+    // If it is, Move The Window To A New Place
     int diffFromEnd;
 
     // If diffFromEnd is negative, it means the window does not overflow the screen

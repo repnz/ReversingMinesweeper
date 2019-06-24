@@ -1,5 +1,6 @@
 #include <Windows.h>
-
+#include "windowing.h"
+#include "resource.h"
 
 int GetRandom(DWORD maxValue) {
     return rand() % maxValue;

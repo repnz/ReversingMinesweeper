@@ -1,4 +1,7 @@
 #include "sound.h"
+#include "config.h"
+#include "resource.h"
+#include "windowing.h"
 
 // 3 if SND_PURGE succeeded else 2
 DWORD StopAllSound() {

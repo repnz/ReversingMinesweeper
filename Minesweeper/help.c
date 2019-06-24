@@ -1,4 +1,7 @@
 #include "help.h"
+#include "windowing.h"
+#include "resource.h"
+#include "config.h"
 
 #define HtmlHelpW_ExportOrdinal 0x0E
 

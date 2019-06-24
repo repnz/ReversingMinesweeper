@@ -3,24 +3,9 @@
 #include "config.h"
 #include "sound.h"
 #include "drawing.h"
+#include "resource.h"
+#include "utils.h"
 
-// Windowing Functions Variables
-// 1 -> New Game: Set on InitializeNewGame. 
-//		The flag is used in couple places to check if the game is not in a finished state:
-//			- 	
-//			- NotifyWindowRestore: Before setting IsTimerOnAndShowed to IsTimerOnTemp back 
-// 2 -> Window is minimized! 
-//		This flag is used before setting IsTimerOnTemp to IsTimerOnAndShowed
-// 4 -> ??
-// 8 -> Another window is minimized flag: 
-//	This flag is used in case of WINDOWPOSCHANGED, The X_pos and Y_pos is updated
-// 0x10 -> Set on FinishGame()
-// This state variable is very bad from a code quality point of view
-// Why don't you just use different variables
-#define STATE_GAME_IS_ON 0b01
-#define STATE_WINDOW_MINIMIZED  0b10
-#define STATE_WINDOW_MINIMIZED_2 0b1000
-#define STATE_GAME_FINISHED 0b10000
 DWORD StateFlags = STATE_GAME_FINISHED | STATE_WINDOW_MINIMIZED;
 
 // Board Array Variables
@@ -44,7 +29,7 @@ int Mines_Copy;
 int Width;
 int Height;
 BYTE BlockArray[27][32];
-#define ACCESS_BLOCK(point) (BlockArray[point.Row][point.Column])
+
 
 
 int CurrentRowColumnListIndex;
@@ -392,7 +377,7 @@ void ShowBlockValue(BoardPoint point) {
 
 // Called on button release
 // Called on MouseMove 
-__inline void ReleaseMouseCapture() {
+void ReleaseMouseCapture() {
     HasMouseCapture = FALSE;
     ReleaseCapture();
 

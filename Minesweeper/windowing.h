@@ -3,9 +3,17 @@
 
 
 // Variables
-extern WCHAR ClassName[];
+extern WCHAR ClassName[32];
 extern BOOL Is3x3Click;
 extern BOOL HasMouseCapture;
+extern HMODULE hModule;
+extern HWND hWnd;
+extern int ScreenHeightInPixels;
+extern int WindowWidthInPixels;
+extern int yBottom;
+extern int xRight;
+extern int MenuBarHeightInPixels;
+extern int WindowHeightInPixels;
 
 // Enum
 #define WINDOW_BORDER_MOVE_WINDOW 2
@@ -15,6 +23,8 @@ extern BOOL HasMouseCapture;
 #define DIFFICULTY_INTERMEDIATE 1
 #define DIFFICULTY_EXPERT 2
 #define DIFFICULTY_CUSTOM 3
+
+#define TIMER_ID 1
 
 // Functions
 BOOL HandleLeftClick(DWORD dwLocation);

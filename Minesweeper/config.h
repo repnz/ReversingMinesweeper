@@ -1,26 +1,24 @@
 #pragma once
 #include <Windows.h>
 
-typedef enum {
-    Difficulty,
-    Mines,
-    Height,
-    Width,
-    Xpos,
-    Ypos,
-    Sound,
-    Mark,
-    Menu,
-    Tick,
-    Color,
-    Time1,
-    Name1,
-    Time2,
-    Name2,
-    Time3,
-    BestExpertName,
-    AlreadyPlayed
-} ConfigItem;
+#define CONFIG_DIFFICULTY 0
+#define CONFIG_MINES 1
+#define CONFIG_HEIGHT 2
+#define CONFIG_WIDTH 3
+#define CONFIG_XPOS 4
+#define CONFIG_YPOS 5
+#define CONFIG_SOUND 6
+#define CONFIG_MARK 7
+#define CONFIG_MENU 8
+#define CONFIG_TICK 9
+#define CONFIG_COLOR 10
+#define CONFIG_TIME1 11
+#define CONFIG_NAME1 12
+#define CONFIG_TIME2 13
+#define CONFIG_NAME2 14
+#define CONFIG_TIME3 15
+#define CONFIG_NAME3 16
+#define CONFIG_ALREADY_PLAYED 17
 
 #define TIME_BEGINNER 0
 #define TIME_INTERMIDIATE 1
@@ -51,20 +49,22 @@ typedef struct {
     int Tick;
     int Menu;
     BOOL Color;
-    DWORD Times[3];
+    int Times[3];
     NameString Names[3];
 } Config;
 
 extern Config GameConfig;
 extern BOOL NeedToSaveConfigToRegistry;
+extern WCHAR SecondsLeftBuffer[];
+extern WCHAR AnonymousStr[];
 
-int GetIntegerFromRegistry(ConfigItem regValue, int defaultValue, int minValue, int maxValue);
-VOID GetStringFromRegistry(ConfigItem id, LPWSTR lpData);
+int GetIntegerFromRegistry(DWORD regValue, int defaultValue, int minValue, int maxValue);
+VOID GetStringFromRegistry(DWORD id, LPWSTR lpData);
 void InitializeConfigFromRegistry();
-void SetIntegerInRegistry(ConfigItem regValue, DWORD value);
-void SetStringInRegistry(ConfigItem regValue, LPCWSTR lpStringValue);
+void SetIntegerInRegistry(DWORD regValue, DWORD value);
+void SetStringInRegistry(DWORD regValue, LPCWSTR lpStringValue);
 void SaveConfigToRegistry();
 
-int GetIntegerFromInitFile(ConfigItem regValue, int nDefault, int minValue, int maxValue);
-int GetStringFromInitFile(ConfigItem regValue, LPWSTR lpReturnedString);
+int GetIntegerFromInitFile(DWORD regValue, int nDefault, int minValue, int maxValue);
+int GetStringFromInitFile(DWORD regValue, LPWSTR lpReturnedString);
 void InitMetricsAndFirstGame();
