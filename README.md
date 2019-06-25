@@ -15,11 +15,9 @@ Most of the process is done using static analysis without using a decompiler. I 
 
 ## TODO
 
-- Create different source files for different components
 - Create documentation
 - Test code 
-- Check and validate unsigned/signed variables 
-- Create a remote Minesweeper Hacking Tool - 
+- Create a remote Minesweeper Hacking Tool (in Rust)
   - Configure bombs
   - Configure timer
   - Remove some constraints
